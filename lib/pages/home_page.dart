@@ -1,0 +1,577 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../models/workout.dart';
+import '../providers/workout_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_section_header.dart';
+import '../widgets/metric_card.dart';
+import '../widgets/smart_reminder_banner.dart';
+import '../widgets/workout_card.dart';
+import 'log_exercises_page.dart';
+import 'workout_details_page.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  int _totalSets(List<Workout> history) {
+    return history.fold(
+      0,
+      (total, workout) =>
+          total +
+          workout.exercises.fold(
+            0,
+            (exerciseTotal, exercise) => exerciseTotal + exercise.sets.length,
+          ),
+    );
+  }
+
+  int _currentStreak(List<Workout> history) {
+    final completedDays = history
+        .map((workout) => workout.completedAt)
+        .whereType<DateTime>()
+        .map((date) => DateTime(date.year, date.month, date.day))
+        .toSet();
+
+    if (completedDays.isEmpty) {
+      return 0;
+    }
+
+    var cursor = DateTime.now();
+    cursor = DateTime(cursor.year, cursor.month, cursor.day);
+    var streak = 0;
+
+    while (completedDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  int _readinessScore({
+    required List<Workout> history,
+    required int streak,
+    required int reminderConfidence,
+  }) {
+    final recentWorkouts = history.where((workout) {
+      final completedAt = workout.completedAt;
+      if (completedAt == null) {
+        return false;
+      }
+
+      return completedAt.isAfter(
+        DateTime.now().subtract(const Duration(days: 7)),
+      );
+    }).length;
+
+    final base = 54 + (recentWorkouts * 7) + (streak * 4);
+    final smartBoost = reminderConfidence ~/ 8;
+    return (base + smartBoost).clamp(42, 96).toInt();
+  }
+
+  Future<void> _showAddWorkoutDialog(BuildContext context) async {
+    final controller = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Add Workout'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Workout Name',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  await dialogContext.read<WorkoutProvider>().addWorkout(name);
+                }
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showRenameWorkoutDialog(
+    BuildContext context,
+    int workoutId,
+    String currentName,
+  ) async {
+    final controller = TextEditingController(text: currentName);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Rename Workout'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Workout Name',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  await dialogContext.read<WorkoutProvider>().renameWorkout(
+                        workoutId,
+                        newName,
+                      );
+                }
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteWorkout(
+    BuildContext context,
+    int workoutId,
+    String workoutName,
+  ) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Delete Workout'),
+              content: Text(
+                'Delete "$workoutName"? This will also remove its exercises and logged sets.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed || !context.mounted) {
+      return;
+    }
+
+    await context.read<WorkoutProvider>().deleteWorkout(workoutId);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"$workoutName" deleted')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<WorkoutProvider>();
+    final workouts = provider.workouts;
+    final history = provider.history;
+    final currentUser = provider.currentUser;
+    final reminder = provider.smartReminder;
+    final timeFormat = DateFormat('h:mm a');
+    final streak = _currentStreak(history);
+    final readiness = _readinessScore(
+      history: history,
+      streak: streak,
+      reminderConfidence: reminder?.confidence ?? 0,
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Today'),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Account',
+            icon: const Icon(Icons.account_circle_outlined),
+            onSelected: (value) {
+              if (value == 'signOut') {
+                context.read<WorkoutProvider>().signOut();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.person_outline),
+                  title: Text(currentUser?.displayName ?? 'Signed in'),
+                  subtitle: Text(currentUser?.email ?? ''),
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'signOut',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.logout),
+                  title: Text('Sign Out'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        children: [
+          const SmartReminderBanner(),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.ink,
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppTheme.gold,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Ready, ${currentUser?.displayName ?? 'athlete'}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            history.isEmpty
+                                ? 'Log a few sessions and GainGuide will learn your rhythm.'
+                                : readiness >= 80
+                                    ? 'Great day to push. Keep the work crisp.'
+                                    : readiness >= 65
+                                        ? 'Solid training window. Stay deliberate.'
+                                        : 'Keep it light and build momentum.',
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.72),
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    _ReadinessScore(score: readiness),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    _HeroPill(
+                      label: 'Sessions',
+                      value: '${history.length}',
+                    ),
+                    const SizedBox(width: 10),
+                    _HeroPill(
+                      label: 'Streak',
+                      value: '${streak}d',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (reminder != null) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        reminder.isDueNow
+                            ? Icons.notifications_active_outlined
+                            : Icons.schedule,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          reminder.isDueNow
+                              ? 'Suggested now'
+                              : 'Suggested next',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                        ),
+                      ),
+                      Text(
+                        '${reminder.confidence}%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    reminder.workout.name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Usually around ${timeFormat.format(reminder.usualTime)}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.76),
+                        ),
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppTheme.ink,
+                    ),
+                    onPressed: reminder.workout.id == null
+                        ? null
+                        : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LogExercisesPage(
+                                  workoutId: reminder.workout.id!,
+                                ),
+                              ),
+                            );
+                          },
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Start Workout'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: MetricCard(
+                  label: 'Workouts',
+                  value: '${history.length}',
+                  icon: Icons.check_circle_outline,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: MetricCard(
+                  label: 'Sets',
+                  value: '${_totalSets(history)}',
+                  icon: Icons.format_list_numbered,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: MetricCard(
+                  label: 'Streak',
+                  value: '${streak}d',
+                  icon: Icons.local_fire_department_outlined,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          AppSectionHeader(
+            title: 'Workout Library',
+          ),
+          if (workouts.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(18),
+                child: Text('No workouts yet. Add one to get started.'),
+              ),
+            )
+          else
+            ...workouts.map((workout) {
+              final workoutId = workout.id;
+
+              if (workoutId == null) {
+                return const SizedBox.shrink();
+              }
+
+              return WorkoutCard(
+                title: workout.name,
+                exerciseCount: workout.exercises.length,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WorkoutDetailsPage(workoutId: workoutId),
+                    ),
+                  );
+                },
+                onRename: () => _showRenameWorkoutDialog(
+                  context,
+                  workoutId,
+                  workout.name,
+                ),
+                onDelete: () => _confirmDeleteWorkout(
+                  context,
+                  workoutId,
+                  workout.name,
+                ),
+              );
+            }),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddWorkoutDialog(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Workout'),
+      ),
+    );
+  }
+}
+
+class _ReadinessScore extends StatelessWidget {
+  final int score;
+
+  const _ReadinessScore({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 92,
+      child: Column(
+        children: [
+          SizedBox(
+            width: 78,
+            height: 78,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 8,
+                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                  color: AppTheme.gold,
+                  strokeCap: StrokeCap.round,
+                ),
+                Text(
+                  '$score',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Readiness',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.68),
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _HeroPill({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    height: 1,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.68),
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
