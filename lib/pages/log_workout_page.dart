@@ -23,6 +23,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
   final TextEditingController _repsController = TextEditingController();
   final FocusNode _weightFocusNode = FocusNode();
   final FocusNode _repsFocusNode = FocusNode();
+  DateTime? _lastSetLoggedAt;
 
   @override
   void dispose() {
@@ -61,11 +62,16 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
       return;
     }
 
+    final now = DateTime.now();
+    final restSeconds = _lastSetLoggedAt == null ? null : now.difference(_lastSetLoggedAt!).inSeconds;
+
     await context.read<WorkoutProvider>().logExerciseSet(
           exerciseId: widget.exerciseId,
           reps: reps,
           weight: weight,
+          restSeconds: restSeconds,
         );
+    _lastSetLoggedAt = now;
 
     _weightController.clear();
     _repsController.clear();
@@ -175,7 +181,9 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                           child: ListTile(
                             title: Text('Set ${index + 1}'),
                             subtitle: Text(
-                              '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps',
+                              set.restSeconds == null
+                                  ? '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps'
+                                  : '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps · Rest ${set.restSeconds! ~/ 60}:${(set.restSeconds! % 60).toString().padLeft(2, '0')}',
                             ),
                             trailing: set.id == null
                                 ? null

@@ -15,7 +15,7 @@ class SupabaseDataService {
       final m=Map<String,dynamic>.from(r);
       final exercises=(m['exercises'] as List? ?? []).map((e) {
         final em=Map<String,dynamic>.from(e);
-        final sets=(em['set_entries'] as List? ?? []).map((s)=>SetEntry(id:s['id'] as int,exerciseId:em['id'] as int,reps:s['reps'] as int,weight:(s['weight'] as num).toDouble())).toList();
+        final sets=(em['set_entries'] as List? ?? []).map((s)=>SetEntry(id:s['id'] as int,exerciseId:em['id'] as int,reps:s['reps'] as int,weight:(s['weight'] as num).toDouble(),restSeconds:s['rest_seconds'] as int?)).toList();
         return Exercise(id:em['id'] as int,workoutId:m['id'] as int,name:em['name'],sets:sets,targetSets:em['target_sets'],minReps:em['min_reps'],maxReps:em['max_reps'],restMinSeconds:em['rest_min_seconds'],restMaxSeconds:em['rest_max_seconds']);
       }).toList();
       return Workout(id:m['id'] as int,name:m['name'],exercises:exercises,scheduledWeekdays:m['scheduled_weekdays'],scheduledHour:m['scheduled_hour'],scheduledMinute:m['scheduled_minute']);
@@ -28,7 +28,7 @@ class SupabaseDataService {
       final m=Map<String,dynamic>.from(r);
       final exercises=(m['completed_exercises'] as List? ?? []).map((e) {
         final em=Map<String,dynamic>.from(e);
-        final sets=(em['completed_set_entries'] as List? ?? []).map((s)=>SetEntry(id:s['id'],exerciseId:em['id'],reps:s['reps'],weight:(s['weight'] as num).toDouble())).toList();
+        final sets=(em['completed_set_entries'] as List? ?? []).map((s)=>SetEntry(id:s['id'],exerciseId:em['id'],reps:s['reps'],weight:(s['weight'] as num).toDouble(),restSeconds:s['rest_seconds'] as int?)).toList();
         return Exercise(id:em['id'],workoutId:m['id'],name:em['name'],sets:sets);
       }).toList();
       return Workout(id:m['id'],name:m['name'],exercises:exercises,completedAt:DateTime.parse(m['completed_at']));
@@ -41,14 +41,14 @@ class SupabaseDataService {
   Future<int> insertExercise(Exercise e) async => (await _db.from('exercises').insert({'workout_id':e.workoutId,'name':e.name,'target_sets':e.targetSets,'min_reps':e.minReps,'max_reps':e.maxReps,'rest_min_seconds':e.restMinSeconds,'rest_max_seconds':e.restMaxSeconds}).select('id').single())['id'];
   Future<void> updateExercise(Exercise e)=>_db.from('exercises').update({'name':e.name,'target_sets':e.targetSets,'min_reps':e.minReps,'max_reps':e.maxReps,'rest_min_seconds':e.restMinSeconds,'rest_max_seconds':e.restMaxSeconds}).eq('id',e.id!);
   Future<void> deleteExercise(int id)=>_db.from('exercises').delete().eq('id',id);
-  Future<void> insertSet(SetEntry s)=>_db.from('set_entries').insert({'exercise_id':s.exerciseId,'reps':s.reps,'weight':s.weight});
+  Future<void> insertSet(SetEntry s)=>_db.from('set_entries').insert({'exercise_id':s.exerciseId,'reps':s.reps,'weight':s.weight,'rest_seconds':s.restSeconds});
   Future<void> deleteSet(int id)=>_db.from('set_entries').delete().eq('id',id);
 
   Future<void> completeWorkout(Workout w) async {
     final cw=await _db.from('completed_workouts').insert({'user_id':userId,'name':w.name,'completed_at':DateTime.now().toUtc().toIso8601String()}).select('id').single();
     for(final e in w.exercises){
       final ce=await _db.from('completed_exercises').insert({'workout_id':cw['id'],'name':e.name}).select('id').single();
-      if(e.sets.isNotEmpty) await _db.from('completed_set_entries').insert(e.sets.map((s)=>{'exercise_id':ce['id'],'reps':s.reps,'weight':s.weight}).toList());
+      if(e.sets.isNotEmpty) await _db.from('completed_set_entries').insert(e.sets.map((s)=>{'exercise_id':ce['id'],'reps':s.reps,'weight':s.weight,'rest_seconds':s.restSeconds}).toList());
     }
     await _db.from('set_entries').delete().inFilter('exercise_id',w.exercises.map((e)=>e.id!).toList());
   }
