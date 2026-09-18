@@ -218,7 +218,7 @@ class WorkoutDetailsPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final exercise = workout.exercises[index];
                     final exerciseId = exercise.id;
-                    return ReorderableDelayedDragStartListener(
+                    return ReorderableDragStartListener(
                       key: ValueKey(exerciseId),
                       index: index,
                       child: ExerciseTile(
