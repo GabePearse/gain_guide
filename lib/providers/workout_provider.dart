@@ -128,7 +128,7 @@ class WorkoutProvider extends ChangeNotifier {
     final workout = getWorkoutById(workoutId);
     if (workout == null) return;
     final value = weekdays.toSet().toList()..sort();
-    await _databaseService.updateWorkout(workout.copyWith(
+    await _data.updateWorkout(workout.copyWith(
       scheduledWeekdays: value.join(','),
       scheduledHour: hour,
       scheduledMinute: minute,
