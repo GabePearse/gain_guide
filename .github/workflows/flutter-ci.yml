@@ -33,6 +33,9 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Set up web SQLite binaries
+        run: dart run sqflite_common_ffi_web:setup
+
       - name: Build web PWA
         run: flutter build web --release
 
