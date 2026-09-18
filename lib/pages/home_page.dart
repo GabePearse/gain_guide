@@ -370,7 +370,6 @@ class HomePage extends StatelessWidget {
               itemCount: workouts.length,
               onReorderItem: (oldIndex, newIndex) {
                 context.read<WorkoutProvider>().reorderWorkouts(oldIndex, newIndex);
-                return true;
               },
               itemBuilder: (context, index) {
               final workout = workouts[index];
