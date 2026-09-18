@@ -50,27 +50,6 @@ class HomePage extends StatelessWidget {
     return streak;
   }
 
-  int _readinessScore({
-    required List<Workout> history,
-    required int streak,
-    required int reminderConfidence,
-  }) {
-    final recentWorkouts = history.where((workout) {
-      final completedAt = workout.completedAt;
-      if (completedAt == null) {
-        return false;
-      }
-
-      return completedAt.isAfter(
-        DateTime.now().subtract(const Duration(days: 7)),
-      );
-    }).length;
-
-    final base = 54 + (recentWorkouts * 7) + (streak * 4);
-    final smartBoost = reminderConfidence ~/ 8;
-    return (base + smartBoost).clamp(42, 96).toInt();
-  }
-
   Future<void> _showAddWorkoutDialog(BuildContext context) async {
     final controller = TextEditingController();
 
@@ -246,11 +225,6 @@ class HomePage extends StatelessWidget {
     final reminder = provider.smartReminder;
     final timeFormat = DateFormat('h:mm a');
     final streak = _currentStreak(history);
-    final readiness = _readinessScore(
-      history: history,
-      streak: streak,
-      reminderConfidence: reminder?.confidence ?? 0,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -325,12 +299,8 @@ class HomePage extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             history.isEmpty
-                                ? 'Log a few sessions and GainGuide will learn your rhythm.'
-                                : readiness >= 80
-                                    ? 'Great day to push. Keep the work crisp.'
-                                    : readiness >= 65
-                                        ? 'Solid training window. Stay deliberate.'
-                                        : 'Keep it light and build momentum.',
+                                ? 'Log your first session and start building your training history.'
+                                : 'Keep your training consistent and your progress moving.',
                             style:
                                 Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color:
@@ -340,8 +310,6 @@ class HomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    _ReadinessScore(score: readiness),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -519,54 +487,6 @@ class HomePage extends StatelessWidget {
         onPressed: () => _showAddWorkoutDialog(context),
         icon: const Icon(Icons.add),
         label: const Text('Add Workout'),
-      ),
-    );
-  }
-}
-
-class _ReadinessScore extends StatelessWidget {
-  final int score;
-
-  const _ReadinessScore({required this.score});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 92,
-      child: Column(
-        children: [
-          SizedBox(
-            width: 78,
-            height: 78,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 8,
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                  color: AppTheme.gold,
-                  strokeCap: StrokeCap.round,
-                ),
-                Text(
-                  '$score',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Readiness',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.68),
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
       ),
     );
   }
