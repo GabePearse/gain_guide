@@ -161,8 +161,9 @@ class WorkoutDetailsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(workout.name),
       ),
-      body: ListView(
+      body: Padding(
         padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
             Card(
               child: Padding(
@@ -199,28 +200,45 @@ class WorkoutDetailsPage extends StatelessWidget {
                 ),
               )
             else
-              ...workout.exercises.map((exercise) {
-                final exerciseId = exercise.id;
-
-                return ExerciseTile(
-                  name: exercise.name,
-                  setCount: exercise.sets.length,
-                  onEdit: exerciseId == null
-                      ? null
-                      : () => _showRenameExerciseDialog(
-                            context,
-                            exerciseId,
-                            exercise.name,
-                          ),
-                  onDelete: exerciseId == null
-                      ? null
-                      : () => _confirmDeleteExercise(
-                            context,
-                            exerciseId,
-                            exercise.name,
-                          ),
-                );
-              }),
+              Expanded(
+                child: ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
+                  itemCount: workout.exercises.length,
+                  onReorderItem: (oldIndex, newIndex) {
+                    context.read<WorkoutProvider>().reorderExercises(
+                          workoutId,
+                          oldIndex,
+                          newIndex,
+                        );
+                  },
+                  itemBuilder: (context, index) {
+                    final exercise = workout.exercises[index];
+                    final exerciseId = exercise.id;
+                    return ReorderableDragStartListener(
+                      key: ValueKey(exerciseId),
+                      index: index,
+                      child: ExerciseTile(
+                        name: exercise.name,
+                        setCount: exercise.sets.length,
+                        onEdit: exerciseId == null
+                            ? null
+                            : () => _showRenameExerciseDialog(
+                                  context,
+                                  exerciseId,
+                                  exercise.name,
+                                ),
+                        onDelete: exerciseId == null
+                            ? null
+                            : () => _confirmDeleteExercise(
+                                  context,
+                                  exerciseId,
+                                  exercise.name,
+                                ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,
@@ -249,6 +267,7 @@ class WorkoutDetailsPage extends StatelessWidget {
               ),
             ),
           ],
+        ),
       ),
     );
   }
