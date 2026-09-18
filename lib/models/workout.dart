@@ -6,6 +6,9 @@ class Workout {
   final String name;
   final List<Exercise> exercises;
   final DateTime? completedAt;
+  final String? scheduledWeekdays;
+  final int? scheduledHour;
+  final int? scheduledMinute;
 
   const Workout({
     this.id,
@@ -13,6 +16,9 @@ class Workout {
     required this.name,
     this.exercises = const [],
     this.completedAt,
+    this.scheduledWeekdays,
+    this.scheduledHour,
+    this.scheduledMinute,
   });
 
   Workout copyWith({
@@ -21,6 +27,9 @@ class Workout {
     String? name,
     List<Exercise>? exercises,
     DateTime? completedAt,
+    String? scheduledWeekdays,
+    int? scheduledHour,
+    int? scheduledMinute,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -28,6 +37,9 @@ class Workout {
       name: name ?? this.name,
       exercises: exercises ?? this.exercises,
       completedAt: completedAt ?? this.completedAt,
+      scheduledWeekdays: scheduledWeekdays ?? this.scheduledWeekdays,
+      scheduledHour: scheduledHour ?? this.scheduledHour,
+      scheduledMinute: scheduledMinute ?? this.scheduledMinute,
     );
   }
 
@@ -37,6 +49,9 @@ class Workout {
       'userId': userId,
       'name': name,
       'completedAt': completedAt?.toIso8601String(),
+      'scheduledWeekdays': scheduledWeekdays,
+      'scheduledHour': scheduledHour,
+      'scheduledMinute': scheduledMinute,
     };
   }
 
@@ -48,6 +63,9 @@ class Workout {
       completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
           : null,
+      scheduledWeekdays: map['scheduledWeekdays'] as String?,
+      scheduledHour: map['scheduledHour'] as int?,
+      scheduledMinute: map['scheduledMinute'] as int?,
     );
   }
 }
