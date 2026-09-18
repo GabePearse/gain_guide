@@ -3,12 +3,14 @@ class SetEntry {
   final int exerciseId;
   final int reps;
   final double weight;
+  final int? restSeconds;
 
   const SetEntry({
     this.id,
     required this.exerciseId,
     required this.reps,
     required this.weight,
+    this.restSeconds,
   });
 
   SetEntry copyWith({
@@ -16,12 +18,14 @@ class SetEntry {
     int? exerciseId,
     int? reps,
     double? weight,
+    int? restSeconds,
   }) {
     return SetEntry(
       id: id ?? this.id,
       exerciseId: exerciseId ?? this.exerciseId,
       reps: reps ?? this.reps,
       weight: weight ?? this.weight,
+      restSeconds: restSeconds ?? this.restSeconds,
     );
   }
 
@@ -31,6 +35,7 @@ class SetEntry {
       'exerciseId': exerciseId,
       'reps': reps,
       'weight': weight,
+      'restSeconds': restSeconds,
     };
   }
 
@@ -40,6 +45,7 @@ class SetEntry {
       exerciseId: map['exerciseId'] as int,
       reps: map['reps'] as int,
       weight: (map['weight'] as num).toDouble(),
+      restSeconds: map['restSeconds'] as int?,
     );
   }
 }
