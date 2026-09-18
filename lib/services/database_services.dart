@@ -29,7 +29,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -62,6 +62,12 @@ class DatabaseService {
           await _addColumnIfMissing(db, 'exercises', 'restMinSeconds', 'INTEGER NOT NULL DEFAULT 90');
           await _addColumnIfMissing(db, 'exercises', 'restMaxSeconds', 'INTEGER NOT NULL DEFAULT 90');
         }
+
+        if (oldVersion < 5) {
+          await _addColumnIfMissing(db, 'workouts', 'scheduledWeekdays', 'TEXT');
+          await _addColumnIfMissing(db, 'workouts', 'scheduledHour', 'INTEGER');
+          await _addColumnIfMissing(db, 'workouts', 'scheduledMinute', 'INTEGER');
+        }
       },
     );
   }
@@ -85,7 +91,10 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER,
         name TEXT NOT NULL,
-        completedAt TEXT
+        completedAt TEXT,
+        scheduledWeekdays TEXT,
+        scheduledHour INTEGER,
+        scheduledMinute INTEGER
       )
     ''');
 
