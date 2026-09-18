@@ -7,7 +7,6 @@ import '../theme/app_theme.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/workout_card.dart';
-import 'log_exercises_page.dart';
 import 'workout_details_page.dart';
 
 class HomePage extends StatelessWidget {
