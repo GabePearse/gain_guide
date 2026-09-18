@@ -105,7 +105,9 @@ class WorkoutProvider extends ChangeNotifier {
     _friends = [];
     _reminders = [];
     _smartReminder = null;
-    await NotificationService.instance.cancelSmartWorkoutReminder();
+    if (!kIsWeb) {
+      await NotificationService.instance.cancelSmartWorkoutReminder();
+    }
     notifyListeners();
   }
 
@@ -471,6 +473,7 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> _syncSmartNotification() async {
+    if (kIsWeb) return;
     await NotificationService.instance.scheduleSmartWorkoutReminder(
       _smartReminder,
     );
