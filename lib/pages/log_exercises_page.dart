@@ -122,11 +122,16 @@ class LogExercisesPage extends StatelessWidget {
                   ? const Center(
                       child: Text('No exercises found for this workout.'),
                     )
-                  : ListView.builder(
+                  : ReorderableListView.builder(
                       itemCount: workout.exercises.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        context.read<WorkoutProvider>().reorderExercises(workoutId, oldIndex, newIndex);
+                      },
                       itemBuilder: (context, index) {
                         final exercise = workout.exercises[index];
-                        return ExerciseTile(
+                        return KeyedSubtree(
+                          key: ValueKey(exercise.id),
+                          child: ExerciseTile(
                           name: exercise.name,
                           setCount: exercise.sets.length,
                           onTap: exercise.id == null
@@ -142,6 +147,7 @@ class LogExercisesPage extends StatelessWidget {
                                     ),
                                   );
                                 },
+                          ),
                         );
                       },
                     ),
