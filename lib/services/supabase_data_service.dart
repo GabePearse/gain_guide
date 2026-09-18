@@ -13,10 +13,11 @@ class SupabaseDataService {
     final rows = await _db.from('workouts').select('*, exercises(*, set_entries(*))').eq('user_id', userId).order('sort_order').order('id');
     return (rows as List).map((r) {
       final m=Map<String,dynamic>.from(r);
-      final exercises=(m['exercises'] as List? ?? []).map((e) {
+      final exerciseRows=List<Map<String,dynamic>>.from((m['exercises'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e)))..sort((a,b){ final c=(a['sort_order'] as int? ?? 0).compareTo(b['sort_order'] as int? ?? 0); return c != 0 ? c : (a['id'] as int).compareTo(b['id'] as int); });
+      final exercises=exerciseRows.map((e) {
         final em=Map<String,dynamic>.from(e);
         final sets=(em['set_entries'] as List? ?? []).map((s)=>SetEntry(id:s['id'] as int,exerciseId:em['id'] as int,reps:s['reps'] as int,weight:(s['weight'] as num).toDouble())).toList();
-        return Exercise(id:em['id'] as int,workoutId:m['id'] as int,name:em['name'],sets:sets,targetSets:em['target_sets'],minReps:em['min_reps'],maxReps:em['max_reps'],restMinSeconds:em['rest_min_seconds'],restMaxSeconds:em['rest_max_seconds']);
+        return Exercise(id:em['id'] as int,workoutId:m['id'] as int,name:em['name'],sets:sets,targetSets:em['target_sets'],minReps:em['min_reps'],maxReps:em['max_reps'],restMinSeconds:em['rest_min_seconds'],restMaxSeconds:em['rest_max_seconds'],sortOrder:em['sort_order'] as int? ?? 0);
       }).toList();
       return Workout(id:m['id'] as int,name:m['name'],exercises:exercises,scheduledWeekdays:m['scheduled_weekdays'],scheduledHour:m['scheduled_hour'],scheduledMinute:m['scheduled_minute'],sortOrder:m['sort_order'] as int? ?? 0);
     }).toList();
@@ -43,8 +44,13 @@ class SupabaseDataService {
     }
   }
   Future<void> deleteWorkout(int id)=>_db.from('workouts').delete().eq('id',id);
-  Future<int> insertExercise(Exercise e) async => (await _db.from('exercises').insert({'workout_id':e.workoutId,'name':e.name,'target_sets':e.targetSets,'min_reps':e.minReps,'max_reps':e.maxReps,'rest_min_seconds':e.restMinSeconds,'rest_max_seconds':e.restMaxSeconds}).select('id').single())['id'];
+  Future<int> insertExercise(Exercise e) async => (await _db.from('exercises').insert({'workout_id':e.workoutId,'name':e.name,'target_sets':e.targetSets,'min_reps':e.minReps,'max_reps':e.maxReps,'rest_min_seconds':e.restMinSeconds,'rest_max_seconds':e.restMaxSeconds,'sort_order':e.sortOrder}).select('id').single())['id'];
   Future<void> updateExercise(Exercise e)=>_db.from('exercises').update({'name':e.name,'target_sets':e.targetSets,'min_reps':e.minReps,'max_reps':e.maxReps,'rest_min_seconds':e.restMinSeconds,'rest_max_seconds':e.restMaxSeconds}).eq('id',e.id!);
+  Future<void> reorderExercises(List<Exercise> exercises) async {
+    for (var i = 0; i < exercises.length; i++) {
+      await _db.from('exercises').update({'sort_order': i}).eq('id', exercises[i].id!);
+    }
+  }
   Future<void> deleteExercise(int id)=>_db.from('exercises').delete().eq('id',id);
   Future<void> insertSet(SetEntry s)=>_db.from('set_entries').insert({'exercise_id':s.exerciseId,'reps':s.reps,'weight':s.weight});
   Future<void> deleteSet(int id)=>_db.from('set_entries').delete().eq('id',id);

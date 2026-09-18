@@ -10,6 +10,7 @@ class Exercise {
   final int maxReps;
   final int restMinSeconds;
   final int restMaxSeconds;
+  final int sortOrder;
 
   const Exercise({
     this.id,
@@ -21,6 +22,7 @@ class Exercise {
     this.maxReps = 10,
     this.restMinSeconds = 90,
     this.restMaxSeconds = 90,
+    this.sortOrder = 0,
   });
 
   Exercise copyWith({
@@ -33,6 +35,7 @@ class Exercise {
     int? maxReps,
     int? restMinSeconds,
     int? restMaxSeconds,
+    int? sortOrder,
   }) {
     return Exercise(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class Exercise {
       maxReps: maxReps ?? this.maxReps,
       restMinSeconds: restMinSeconds ?? this.restMinSeconds,
       restMaxSeconds: restMaxSeconds ?? this.restMaxSeconds,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -57,6 +61,7 @@ class Exercise {
       'maxReps': maxReps,
       'restMinSeconds': restMinSeconds,
       'restMaxSeconds': restMaxSeconds,
+      'sortOrder': sortOrder,
     };
   }
 
@@ -70,6 +75,7 @@ class Exercise {
       maxReps: (map['maxReps'] as int?) ?? 10,
       restMinSeconds: (map['restMinSeconds'] as int?) ?? 90,
       restMaxSeconds: (map['restMaxSeconds'] as int?) ?? 90,
+      sortOrder: (map['sortOrder'] as int?) ?? 0,
     );
   }
 }
