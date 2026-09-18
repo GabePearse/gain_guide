@@ -43,7 +43,11 @@ class WorkoutCard extends StatelessWidget {
             exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises',
           ),
         ),
-        trailing: PopupMenuButton<String>(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 44),
+            PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
               case 'rename':
@@ -81,6 +85,8 @@ class WorkoutCard extends StatelessWidget {
                 leading: Icon(Icons.delete_outline),
                 title: Text('Delete'),
               ),
+            ),
+          ],
             ),
           ],
         ),
