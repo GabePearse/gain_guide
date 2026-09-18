@@ -162,6 +162,18 @@ class WorkoutProvider extends ChangeNotifier {
     await loadWorkouts();
   }
 
+  Future<void> reorderExercises(int workoutId, int oldIndex, int newIndex) async {
+    final workoutIndex = _workouts.indexWhere((w) => w.id == workoutId);
+    if (workoutIndex < 0) return;
+    final exercises = List<Exercise>.from(_workouts[workoutIndex].exercises);
+    final item = exercises.removeAt(oldIndex);
+    exercises.insert(newIndex, item);
+    _workouts[workoutIndex] = _workouts[workoutIndex].copyWith(exercises: exercises);
+    notifyListeners();
+    await _data.reorderExercises(exercises);
+    await loadWorkouts();
+  }
+
   Future<void> renameExercise(int exerciseId, String newName) async {
     Exercise? targetExercise;
 
