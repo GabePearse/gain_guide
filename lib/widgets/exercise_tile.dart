@@ -47,6 +47,7 @@ class ExerciseTile extends StatelessWidget {
                   leading: Icon(Icons.edit_outlined),
                   title: Text('Rename'),
                 ),
+              ),
             );
           }
 
