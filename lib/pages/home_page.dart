@@ -366,6 +366,10 @@ class HomePage extends StatelessWidget {
           else
             ReorderableListView.builder(
               buildDefaultDragHandles: false,
+              proxyDecorator: (child, index, animation) => Material(
+                color: Colors.transparent,
+                child: child,
+              ),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: workouts.length,
