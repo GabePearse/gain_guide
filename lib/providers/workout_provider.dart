@@ -3,23 +3,20 @@ import 'package:intl/intl.dart';
 
 import '../models/app_user.dart';
 import '../models/exercise.dart';
-import '../models/friend_reminder.dart';
-import '../models/friend_summary.dart';
 import '../models/set_entry.dart';
 import '../models/workout.dart';
 import '../models/workout_reminder.dart';
-import '../services/database_services.dart';
-import '../services/external_auth_service.dart';
+import '../services/supabase_data_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
 
 class WorkoutProvider extends ChangeNotifier {
-  final DatabaseService _databaseService = DatabaseService.instance;
+  final SupabaseDataService _data = SupabaseDataService.instance;
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   AppUser? _currentUser;
   List<Workout> _workouts = [];
   List<Workout> _history = [];
-  List<FriendSummary> _friends = [];
-  List<FriendReminder> _reminders = [];
   WorkoutReminder? _smartReminder;
   bool _isInitialized = false;
 
@@ -28,104 +25,70 @@ class WorkoutProvider extends ChangeNotifier {
   bool get isSignedIn => _currentUser != null;
   List<Workout> get workouts => List.unmodifiable(_workouts);
   List<Workout> get history => List.unmodifiable(_history);
-  List<FriendSummary> get friends => List.unmodifiable(_friends);
-  List<FriendReminder> get reminders => List.unmodifiable(_reminders);
   WorkoutReminder? get smartReminder => _smartReminder;
 
-  Future<void> initialize() async {
-    _currentUser = await _databaseService.getActiveUser();
-    if (_currentUser != null) {
-      await _prepareSignedInUser();
-    }
+  AppUser? _appUserFromAuth() {
+    final u = _supabase.auth.currentUser;
+    if (u == null) return null;
+    return AppUser(
+      id: u.id.hashCode,
+      displayName: (u.userMetadata?['display_name'] as String?) ?? u.email?.split('@').first ?? 'User',
+      email: u.email ?? '',
+      createdAt: DateTime.tryParse(u.createdAt) ?? DateTime.now(),
+    );
+  }
 
+  Future<void> initialize() async {
+    _currentUser = _appUserFromAuth();
+    if (_currentUser != null) await _prepareSignedInUser();
     _isInitialized = true;
     notifyListeners();
   }
 
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
-    final user = await _databaseService.signIn(
-      email: email,
-      password: password,
-    );
-
-    if (user == null) {
+  Future<bool> signIn({required String email, required String password}) async {
+    try {
+      await _supabase.auth.signInWithPassword(email: email.trim(), password: password);
+      _currentUser = _appUserFromAuth();
+      await _prepareSignedInUser();
+      notifyListeners();
+      return true;
+    } on AuthException {
       return false;
     }
-
-    _currentUser = user;
-    await _prepareSignedInUser();
-    notifyListeners();
-    return true;
   }
 
-  Future<void> createAccount({
-    required String displayName,
-    required String email,
-    required String password,
-  }) async {
-    _currentUser = await _databaseService.createUser(
-      displayName: displayName,
-      email: email,
+  Future<void> createAccount({required String displayName, required String email, required String password}) async {
+    final response = await _supabase.auth.signUp(
+      email: email.trim(),
       password: password,
+      data: {'display_name': displayName.trim()},
     );
-    await _prepareSignedInUser();
-    notifyListeners();
-  }
-
-  Future<void> signInWithGoogle() async {
-    final profile = await ExternalAuthService.instance.signInWithGoogle();
-    _currentUser = await _databaseService.getOrCreateExternalUser(
-      displayName: profile.displayName,
-      email: profile.email,
-      provider: profile.provider,
-    );
-    await _prepareSignedInUser();
-    notifyListeners();
-  }
-
-  Future<void> signInWithApple() async {
-    final profile = await ExternalAuthService.instance.signInWithApple();
-    _currentUser = await _databaseService.getOrCreateExternalUser(
-      displayName: profile.displayName,
-      email: profile.email,
-      provider: profile.provider,
-    );
-    await _prepareSignedInUser();
+    _currentUser = response.user == null ? null : _appUserFromAuth();
+    if (_currentUser != null && response.session != null) await _prepareSignedInUser();
     notifyListeners();
   }
 
   Future<void> signOut() async {
-    await _databaseService.signOut();
+    await _supabase.auth.signOut();
     _currentUser = null;
     _workouts = [];
     _history = [];
-    _friends = [];
-    _reminders = [];
     _smartReminder = null;
-    if (!kIsWeb) {
-      await NotificationService.instance.cancelSmartWorkoutReminder();
-    }
+    if (!kIsWeb) await NotificationService.instance.cancelSmartWorkoutReminder();
     notifyListeners();
   }
 
   Future<void> _prepareSignedInUser() async {
-    final userId = _requireUserId();
-    await _databaseService.claimLegacyData(userId);
     await _seedInitialDataIfNeeded();
     await loadWorkouts();
     await loadHistory();
-    await loadFriends();
-    await loadReminders();
     _smartReminder = _buildSmartReminder();
     await _syncSmartNotification();
   }
 
   Future<void> loadWorkouts() async {
     if (_currentUser == null) return;
-    _workouts = await _databaseService.getWorkouts(userId: _requireUserId());
+    _workouts = await _data.getWorkouts();
     _smartReminder = _buildSmartReminder();
     await _syncSmartNotification();
     notifyListeners();
@@ -133,68 +96,14 @@ class WorkoutProvider extends ChangeNotifier {
 
   Future<void> loadHistory() async {
     if (_currentUser == null) return;
-    _history = await _databaseService.getHistory(userId: _requireUserId());
+    _history = await _data.getHistory();
     _smartReminder = _buildSmartReminder();
     await _syncSmartNotification();
     notifyListeners();
   }
 
-  Future<void> loadFriends() async {
-    if (_currentUser == null) return;
-    _friends = await _databaseService.getFriends(_requireUserId());
-    notifyListeners();
-  }
-
-  Future<void> loadReminders() async {
-    if (_currentUser == null) return;
-    _reminders = await _databaseService.getReminders(_requireUserId());
-    notifyListeners();
-  }
-
-  Future<void> addFriend({
-    required String displayName,
-    required String email,
-  }) async {
-    await _databaseService.addFriend(
-      ownerUserId: _requireUserId(),
-      displayName: displayName,
-      email: email,
-    );
-    await loadFriends();
-  }
-
-  Future<void> sendReminder({
-    required int friendUserId,
-    required String message,
-  }) async {
-    await _databaseService.sendReminder(
-      fromUserId: _requireUserId(),
-      toUserId: friendUserId,
-      message: message,
-    );
-    await loadReminders();
-  }
-
-  Future<void> markRemindersRead() async {
-    await _databaseService.markReceivedRemindersRead(_requireUserId());
-    await loadFriends();
-    await loadReminders();
-  }
-
-  Future<void> checkInNow() async {
-    final userId = _requireUserId();
-    await _databaseService.updateUserCheckIn(userId);
-    _currentUser = await _databaseService.getUserById(userId);
-    notifyListeners();
-  }
-
   Future<void> addWorkout(String name) async {
-    await _databaseService.insertWorkout(
-      Workout(
-        userId: _requireUserId(),
-        name: name.trim(),
-      ),
-    );
+    await _data.insertWorkout(name.trim());
     await loadWorkouts();
   }
 
@@ -204,7 +113,7 @@ class WorkoutProvider extends ChangeNotifier {
       return;
     }
 
-    await _databaseService.updateWorkout(
+    await _data.updateWorkout(
       workout.copyWith(name: newName.trim()),
     );
     await loadWorkouts();
@@ -228,12 +137,12 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> deleteWorkout(int workoutId) async {
-    await _databaseService.deleteWorkout(workoutId);
+    await _data.deleteWorkout(workoutId);
     await loadWorkouts();
   }
 
   Future<void> addExercise(int workoutId, String exerciseName) async {
-    await _databaseService.insertExercise(
+    await _data.insertExercise(
       Exercise(
         workoutId: workoutId,
         name: exerciseName.trim(),
@@ -261,14 +170,14 @@ class WorkoutProvider extends ChangeNotifier {
       return;
     }
 
-    await _databaseService.updateExercise(
+    await _data.updateExercise(
       targetExercise.copyWith(name: newName.trim()),
     );
     await loadWorkouts();
   }
 
   Future<void> deleteExercise(int exerciseId) async {
-    await _databaseService.deleteExercise(exerciseId);
+    await _data.deleteExercise(exerciseId);
     await loadWorkouts();
   }
 
@@ -277,7 +186,7 @@ class WorkoutProvider extends ChangeNotifier {
     required int reps,
     required double weight,
   }) async {
-    await _databaseService.insertSetEntry(
+    await _data.insertSet(
       SetEntry(
         exerciseId: exerciseId,
         reps: reps,
@@ -289,25 +198,16 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> deleteSetEntry(int setEntryId) async {
-    await _databaseService.deleteSetEntry(setEntryId);
+    await _data.deleteSet(setEntryId);
     await loadWorkouts();
   }
 
   Future<void> completeWorkout(int workoutId) async {
-    final workout = _workouts.where((w) => w.id == workoutId).firstOrNull;
-    if (workout == null) {
-      return;
-    }
-
-    await _databaseService.completeWorkout(
-      workout: workout,
-      userId: _requireUserId(),
-    );
-
-    _currentUser = await _databaseService.getUserById(_requireUserId());
+    final workout = getWorkoutById(workoutId);
+    if (workout == null) return;
+    await _data.completeWorkout(workout);
     await loadWorkouts();
     await loadHistory();
-    await loadFriends();
     _smartReminder = _buildSmartReminder();
     await _syncSmartNotification();
   }
@@ -316,11 +216,9 @@ class WorkoutProvider extends ChangeNotifier {
     required DateTime start,
     required DateTime end,
   }) async {
-    final workouts = await _databaseService.getHistoryForRange(
-      userId: _requireUserId(),
-      start: start,
-      end: end,
-    );
+    final allHistory = await _data.getHistory();
+    final inclusiveEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+    final workouts = allHistory.where((w) => w.completedAt != null && !w.completedAt!.isBefore(start) && !w.completedAt!.isAfter(inclusiveEnd)).toList();
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
     final dayFormat = DateFormat('yyyy-MM-dd');
     final buffer = StringBuffer()
@@ -482,14 +380,6 @@ class WorkoutProvider extends ChangeNotifier {
     );
   }
 
-  int _requireUserId() {
-    final userId = _currentUser?.id;
-    if (userId == null) {
-      throw StateError('A signed-in user is required.');
-    }
-    return userId;
-  }
-
   String? progressiveOverloadAdvice(Exercise exercise) {
     for (final workout in _history) {
       for (final previous in workout.exercises) {
@@ -509,13 +399,12 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> _seedInitialDataIfNeeded() async {
-    final userId = _requireUserId();
-    final existingWorkouts = await _databaseService.getWorkouts(userId: userId);
+    final existingWorkouts = await _data.getWorkouts();
     if (existingWorkouts.isNotEmpty) return;
 
-    Future<int> workout(String name) => _databaseService.insertWorkout(Workout(userId: userId, name: name));
+    Future<int> workout(String name) => _data.insertWorkout(name);
     Future<void> exercise(int workoutId, String name, int sets, int min, int max, int restMin, int restMax) =>
-        _databaseService.insertExercise(Exercise(workoutId: workoutId, name: name, targetSets: sets, minReps: min, maxReps: max, restMinSeconds: restMin, restMaxSeconds: restMax));
+        _data.insertExercise(Exercise(workoutId: workoutId, name: name, targetSets: sets, minReps: min, maxReps: max, restMinSeconds: restMin, restMaxSeconds: restMax));
 
     final upperA = await workout('Upper A');
     await exercise(upperA, 'Bench Press', 3, 8, 10, 120, 180);
