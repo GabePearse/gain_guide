@@ -209,6 +209,23 @@ class WorkoutProvider extends ChangeNotifier {
     await loadWorkouts();
   }
 
+  Future<void> scheduleWorkout({
+    required int workoutId,
+    required List<int> weekdays,
+    required int hour,
+    required int minute,
+  }) async {
+    final workout = getWorkoutById(workoutId);
+    if (workout == null) return;
+    final value = weekdays.toSet().toList()..sort();
+    await _databaseService.updateWorkout(workout.copyWith(
+      scheduledWeekdays: value.join(','),
+      scheduledHour: hour,
+      scheduledMinute: minute,
+    ));
+    await loadWorkouts();
+  }
+
   Future<void> deleteWorkout(int workoutId) async {
     await _databaseService.deleteWorkout(workoutId);
     await loadWorkouts();
@@ -456,6 +473,10 @@ class WorkoutProvider extends ChangeNotifier {
   Future<void> _syncSmartNotification() async {
     await NotificationService.instance.scheduleSmartWorkoutReminder(
       _smartReminder,
+    );
+    await NotificationService.instance.scheduleWorkoutPlan(
+      workouts: _workouts,
+      history: _history,
     );
   }
 
