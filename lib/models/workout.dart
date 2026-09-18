@@ -9,6 +9,7 @@ class Workout {
   final String? scheduledWeekdays;
   final int? scheduledHour;
   final int? scheduledMinute;
+  final int sortOrder;
 
   const Workout({
     this.id,
@@ -19,6 +20,7 @@ class Workout {
     this.scheduledWeekdays,
     this.scheduledHour,
     this.scheduledMinute,
+    this.sortOrder = 0,
   });
 
   Workout copyWith({
@@ -30,6 +32,7 @@ class Workout {
     String? scheduledWeekdays,
     int? scheduledHour,
     int? scheduledMinute,
+    int? sortOrder,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -40,6 +43,7 @@ class Workout {
       scheduledWeekdays: scheduledWeekdays ?? this.scheduledWeekdays,
       scheduledHour: scheduledHour ?? this.scheduledHour,
       scheduledMinute: scheduledMinute ?? this.scheduledMinute,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -52,6 +56,7 @@ class Workout {
       'scheduledWeekdays': scheduledWeekdays,
       'scheduledHour': scheduledHour,
       'scheduledMinute': scheduledMinute,
+      'sortOrder': sortOrder,
     };
   }
 
@@ -66,6 +71,7 @@ class Workout {
       scheduledWeekdays: map['scheduledWeekdays'] as String?,
       scheduledHour: map['scheduledHour'] as int?,
       scheduledMinute: map['scheduledMinute'] as int?,
+      sortOrder: map['sortOrder'] as int? ?? 0,
     );
   }
 }
