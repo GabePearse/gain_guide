@@ -62,7 +62,6 @@ class _AuthPageState extends State<AuthPage> {
   final _passwordController = TextEditingController(text: 'password');
   bool _isCreatingAccount = true;
   bool _isSubmitting = false;
-  String? _externalProviderLoading;
 
   @override
   void dispose() {
@@ -110,32 +109,6 @@ class _AuthPageState extends State<AuthPage> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _signInWithExternal(String provider) async {
-    setState(() {
-      _externalProviderLoading = provider;
-    });
-
-    try {
-      final workoutProvider = context.read<WorkoutProvider>();
-      if (provider == 'google') {
-        await workoutProvider.signInWithGoogle();
-      } else {
-        await workoutProvider.signInWithApple();
-      }
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not sign in with $provider: $error')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _externalProviderLoading = null;
         });
       }
     }
@@ -259,46 +232,6 @@ class _AuthPageState extends State<AuthPage> {
                                     : _isCreatingAccount
                                         ? 'Create Account'
                                         : 'Sign In',
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Text(
-                                    'or',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: _externalProviderLoading == null
-                                  ? () => _signInWithExternal('google')
-                                  : null,
-                              icon: const Icon(Icons.g_mobiledata),
-                              label: Text(
-                                _externalProviderLoading == 'google'
-                                    ? 'Connecting...'
-                                    : 'Continue with Google',
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: _externalProviderLoading == null
-                                  ? () => _signInWithExternal('apple')
-                                  : null,
-                              icon: const Icon(Icons.apple),
-                              label: Text(
-                                _externalProviderLoading == 'apple'
-                                    ? 'Connecting...'
-                                    : 'Continue with Apple',
                               ),
                             ),
                           ],
