@@ -382,13 +382,7 @@ class HomePage extends StatelessWidget {
 
               return WorkoutCard(
                 key: ValueKey(workoutId),
-                reorderHandle: ReorderableDragStartListener(
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(Icons.drag_handle),
-                  ),
-                ),
+                dragIndex: index,
                 title: workout.name,
                 exerciseCount: workout.exercises.length,
                 onTap: () {
