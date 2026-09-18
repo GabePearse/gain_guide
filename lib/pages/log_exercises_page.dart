@@ -124,6 +124,10 @@ class LogExercisesPage extends StatelessWidget {
                     )
                   : ReorderableListView.builder(
                       buildDefaultDragHandles: false,
+                      proxyDecorator: (child, index, animation) => Material(
+                        color: Colors.transparent,
+                        child: child,
+                      ),
                       itemCount: workout.exercises.length,
                       onReorderItem: (oldIndex, newIndex) {
                         context.read<WorkoutProvider>().reorderExercises(workoutId, oldIndex, newIndex);
