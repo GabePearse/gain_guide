@@ -5,6 +5,7 @@ class WorkoutCard extends StatelessWidget {
   final int exerciseCount;
   final VoidCallback onTap;
   final VoidCallback onRename;
+  final VoidCallback onSchedule;
   final VoidCallback onDelete;
 
   const WorkoutCard({
@@ -12,6 +13,7 @@ class WorkoutCard extends StatelessWidget {
     required this.exerciseCount,
     required this.onTap,
     required this.onRename,
+    required this.onSchedule,
     required this.onDelete,
     super.key,
   });
@@ -47,12 +49,23 @@ class WorkoutCard extends StatelessWidget {
               case 'rename':
                 onRename();
                 break;
+              case 'schedule':
+                onSchedule();
+                break;
               case 'delete':
                 onDelete();
                 break;
             }
           },
           itemBuilder: (context) => const [
+            PopupMenuItem<String>(
+              value: 'schedule',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.calendar_month_outlined),
+                title: Text('Schedule'),
+              ),
+            ),
             PopupMenuItem<String>(
               value: 'rename',
               child: ListTile(

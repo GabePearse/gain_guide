@@ -3,7 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class RestTimerCard extends StatefulWidget {
-  const RestTimerCard({super.key});
+  final int initialSeconds;
+
+  const RestTimerCard({
+    this.initialSeconds = 90,
+    super.key,
+  });
 
   @override
   State<RestTimerCard> createState() => _RestTimerCardState();
@@ -13,9 +18,16 @@ class _RestTimerCardState extends State<RestTimerCard> {
   static const List<int> _presets = [60, 90, 120, 180];
 
   Timer? _timer;
-  int _selectedSeconds = 90;
-  int _remainingSeconds = 90;
+  late int _selectedSeconds;
+  late int _remainingSeconds;
   bool _isRunning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedSeconds = widget.initialSeconds;
+    _remainingSeconds = widget.initialSeconds;
+  }
 
   @override
   void dispose() {
@@ -145,7 +157,7 @@ class _RestTimerCardState extends State<RestTimerCard> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _presets.map((seconds) {
+              children: ({..._presets, widget.initialSeconds}.toList()..sort()).map((seconds) {
                 return ChoiceChip(
                   selected: _selectedSeconds == seconds,
                   label: Text(

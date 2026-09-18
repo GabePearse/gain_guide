@@ -158,6 +158,45 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  Future<void> _showScheduleDialog(BuildContext context, Workout workout) async {
+    final selected = (workout.scheduledWeekdays ?? '')
+        .split(',').map(int.tryParse).whereType<int>().toSet();
+    var time = TimeOfDay(hour: workout.scheduledHour ?? 18, minute: workout.scheduledMinute ?? 0);
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Schedule ${workout.name}'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Wrap(spacing: 6, children: List.generate(7, (i) => FilterChip(
+              label: Text(labels[i]), selected: selected.contains(i + 1),
+              onSelected: (value) => setState(() => value ? selected.add(i + 1) : selected.remove(i + 1)),
+            ))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: const Text('Workout time'),
+              subtitle: Text(time.format(context)),
+              onTap: () async {
+                final picked = await showTimePicker(context: context, initialTime: time);
+                if (picked != null) setState(() => time = picked);
+              },
+            ),
+            const Text('GainGuide will remind you at workout time and again at 9 PM if the workout is still missed.'),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(onPressed: selected.isEmpty ? null : () async {
+              await dialogContext.read<WorkoutProvider>().scheduleWorkout(
+                workoutId: workout.id!, weekdays: selected.toList(), hour: time.hour, minute: time.minute);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            }, child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+  }
   Future<void> _confirmDeleteWorkout(
     BuildContext context,
     int workoutId,
@@ -461,6 +500,7 @@ class HomePage extends StatelessWidget {
                     ),
                   );
                 },
+                onSchedule: () => _showScheduleDialog(context, workout),
                 onRename: () => _showRenameWorkoutDialog(
                   context,
                   workoutId,

@@ -209,6 +209,23 @@ class WorkoutProvider extends ChangeNotifier {
     await loadWorkouts();
   }
 
+  Future<void> scheduleWorkout({
+    required int workoutId,
+    required List<int> weekdays,
+    required int hour,
+    required int minute,
+  }) async {
+    final workout = getWorkoutById(workoutId);
+    if (workout == null) return;
+    final value = weekdays.toSet().toList()..sort();
+    await _databaseService.updateWorkout(workout.copyWith(
+      scheduledWeekdays: value.join(','),
+      scheduledHour: hour,
+      scheduledMinute: minute,
+    ));
+    await loadWorkouts();
+  }
+
   Future<void> deleteWorkout(int workoutId) async {
     await _databaseService.deleteWorkout(workoutId);
     await loadWorkouts();
@@ -457,6 +474,10 @@ class WorkoutProvider extends ChangeNotifier {
     await NotificationService.instance.scheduleSmartWorkoutReminder(
       _smartReminder,
     );
+    await NotificationService.instance.scheduleWorkoutPlan(
+      workouts: _workouts,
+      history: _history,
+    );
   }
 
   int _requireUserId() {
@@ -467,52 +488,79 @@ class WorkoutProvider extends ChangeNotifier {
     return userId;
   }
 
+  String? progressiveOverloadAdvice(Exercise exercise) {
+    for (final workout in _history) {
+      for (final previous in workout.exercises) {
+        if (previous.name.toLowerCase() != exercise.name.toLowerCase() || previous.sets.isEmpty) continue;
+        final sets = previous.sets;
+        final enoughSets = sets.length >= exercise.targetSets;
+        final hitTopRange = enoughSets && sets.take(exercise.targetSets).every((set) => set.reps >= exercise.maxReps);
+        final sameWeight = sets.take(exercise.targetSets).map((set) => set.weight).toSet().length == 1;
+        final weight = sets.first.weight;
+        if (hitTopRange && sameWeight) {
+          return 'Last time: ${weight.toStringAsFixed(1)} lbs for ${sets.take(exercise.targetSets).map((s) => s.reps).join('/')} reps. Increase the weight this session.';
+        }
+        return 'Last time: ${sets.map((s) => '${s.weight.toStringAsFixed(1)}×${s.reps}').join(', ')}. Stay at the weight until you reach ${exercise.maxReps} reps on all ${exercise.targetSets} sets.';
+      }
+    }
+    return null;
+  }
+
   Future<void> _seedInitialDataIfNeeded() async {
     final userId = _requireUserId();
     final existingWorkouts = await _databaseService.getWorkouts(userId: userId);
-    if (existingWorkouts.isNotEmpty) {
-      return;
-    }
+    if (existingWorkouts.isNotEmpty) return;
 
-    final pushDayId = await _databaseService.insertWorkout(
-      Workout(userId: userId, name: 'Push Day'),
-    );
-    final pullDayId = await _databaseService.insertWorkout(
-      Workout(userId: userId, name: 'Pull Day'),
-    );
-    final legsId = await _databaseService.insertWorkout(
-      Workout(userId: userId, name: 'Legs'),
-    );
+    Future<int> workout(String name) => _databaseService.insertWorkout(Workout(userId: userId, name: name));
+    Future<void> exercise(int workoutId, String name, int sets, int min, int max, int restMin, int restMax) =>
+        _databaseService.insertExercise(Exercise(workoutId: workoutId, name: name, targetSets: sets, minReps: min, maxReps: max, restMinSeconds: restMin, restMaxSeconds: restMax));
 
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pushDayId, name: 'Bench Press'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pushDayId, name: 'Incline DB Press'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pushDayId, name: 'Tricep Pushdown'),
-    );
+    final upperA = await workout('Upper A');
+    await exercise(upperA, 'Bench Press', 3, 8, 10, 120, 180);
+    await exercise(upperA, 'Chest-Supported Row', 3, 8, 10, 120, 120);
+    await exercise(upperA, 'Incline DB Press', 3, 8, 10, 120, 120);
+    await exercise(upperA, 'Lat Pulldown', 3, 8, 10, 120, 120);
+    await exercise(upperA, 'Cable Lateral Raise', 3, 10, 15, 60, 90);
+    await exercise(upperA, 'Preacher Curl', 2, 8, 10, 90, 90);
+    await exercise(upperA, 'Tricep Pushdown', 2, 8, 10, 90, 90);
 
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pullDayId, name: 'Lat Pulldown'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pullDayId, name: 'Barbell Row'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: pullDayId, name: 'Hammer Curl'),
-    );
+    final lowerA = await workout('Lower A — Quad/Hip');
+    await exercise(lowerA, 'Squat or Hack Squat', 3, 8, 10, 120, 180);
+    await exercise(lowerA, 'Romanian Deadlift', 3, 8, 10, 120, 180);
+    await exercise(lowerA, 'Bulgarian Split Squat', 3, 8, 10, 120, 120);
+    await exercise(lowerA, 'Leg Extension', 2, 8, 10, 90, 90);
+    await exercise(lowerA, 'Hip Abduction', 3, 12, 15, 60, 90);
+    await exercise(lowerA, 'Calf Raise', 3, 10, 15, 90, 90);
+    await exercise(lowerA, 'Cable Crunch', 3, 8, 12, 90, 90);
 
-    await _databaseService.insertExercise(
-      Exercise(workoutId: legsId, name: 'Squat'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: legsId, name: 'Leg Press'),
-    );
-    await _databaseService.insertExercise(
-      Exercise(workoutId: legsId, name: 'Leg Curl'),
-    );
+    final upperB = await workout('Upper B');
+    await exercise(upperB, 'Incline DB Press', 3, 8, 10, 120, 180);
+    await exercise(upperB, 'Lat Pulldown', 3, 8, 10, 120, 120);
+    await exercise(upperB, 'Shoulder Press', 3, 8, 10, 120, 120);
+    await exercise(upperB, 'Chest-Supported Row', 3, 8, 10, 120, 120);
+    await exercise(upperB, 'Rear-Delt Fly', 3, 12, 15, 60, 90);
+    await exercise(upperB, 'Face Pull', 2, 12, 15, 60, 90);
+    await exercise(upperB, 'Hammer Curl', 2, 8, 10, 90, 90);
+    await exercise(upperB, 'Overhead Tricep Extension', 2, 8, 10, 90, 90);
+
+    final lowerB = await workout('Lower B — Posterior/Hip');
+    await exercise(lowerB, 'Hip Thrust', 3, 8, 10, 120, 180);
+    await exercise(lowerB, 'Leg Press', 3, 8, 10, 120, 180);
+    await exercise(lowerB, 'Seated/Lying Leg Curl', 3, 8, 10, 90, 120);
+    await exercise(lowerB, 'Walking Lunge', 2, 8, 10, 120, 120);
+    await exercise(lowerB, 'Hip Adduction', 3, 12, 15, 60, 90);
+    await exercise(lowerB, 'Hip Abduction', 2, 12, 15, 60, 90);
+    await exercise(lowerB, 'Calf Raise', 3, 10, 15, 90, 90);
+    await exercise(lowerB, 'Hanging Leg Raise', 3, 8, 12, 90, 90);
+
+    final accessory = await workout('Accessory — Optional');
+    await exercise(accessory, 'Cable Lateral Raise', 3, 12, 15, 60, 90);
+    await exercise(accessory, 'Rear-Delt Fly', 2, 12, 15, 60, 90);
+    await exercise(accessory, 'Preacher Curl', 3, 8, 10, 90, 90);
+    await exercise(accessory, 'Hammer Curl', 2, 8, 10, 90, 90);
+    await exercise(accessory, 'Tricep Pushdown', 3, 8, 10, 90, 90);
+    await exercise(accessory, 'Overhead Tricep Extension', 2, 8, 10, 90, 90);
+    await exercise(accessory, 'Cable Crunch', 3, 8, 12, 90, 90);
   }
 }
 
