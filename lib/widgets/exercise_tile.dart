@@ -97,9 +97,6 @@ class ExerciseTile extends StatelessWidget {
               ),
         trailing: trailing,
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
       ),
     );
   }
