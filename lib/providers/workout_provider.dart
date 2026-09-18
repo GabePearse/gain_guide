@@ -202,6 +202,11 @@ class WorkoutProvider extends ChangeNotifier {
     await loadWorkouts();
   }
 
+  Future<void> deleteHistoryWorkout(int completedWorkoutId) async {
+    await _data.deleteCompletedWorkout(completedWorkoutId);
+    await loadHistory();
+  }
+
   Future<void> completeWorkout(int workoutId) async {
     final workout = getWorkoutById(workoutId);
     if (workout == null) return;
