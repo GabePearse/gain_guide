@@ -365,6 +365,7 @@ class HomePage extends StatelessWidget {
             )
           else
             ReorderableListView.builder(
+              buildDefaultDragHandles: false,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: workouts.length,
@@ -381,6 +382,13 @@ class HomePage extends StatelessWidget {
 
               return WorkoutCard(
                 key: ValueKey(workoutId),
+                reorderHandle: ReorderableDragStartListener(
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
                 title: workout.name,
                 exerciseCount: workout.exercises.length,
                 onTap: () {
