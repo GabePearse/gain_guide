@@ -56,6 +56,25 @@ class HistoryPage extends StatelessWidget {
     await context.read<WorkoutProvider>().loadHistory();
   }
 
+  Future<void> _deleteWorkout(BuildContext context, Workout workout) async {
+    if (workout.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete workout?'),
+        content: Text('Delete "${workout.name}" from your history? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+        ],
+      ),
+    ) ?? false;
+    if (!confirmed || !context.mounted) return;
+    await context.read<WorkoutProvider>().deleteHistoryWorkout(workout.id!);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Workout deleted from history')));
+  }
+
   Future<void> _exportRange(BuildContext context) async {
     final now = DateTime.now();
     final range = await showDateRangePicker(
@@ -149,7 +168,16 @@ class HistoryPage extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ExpansionTile(
                         leading: const Icon(Icons.fitness_center),
-                        title: Text(workout.name),
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(workout.name)),
+                            IconButton(
+                              tooltip: 'Delete from history',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _deleteWorkout(context, workout),
+                            ),
+                          ],
+                        ),
                         subtitle: Text(
                           '$dateText\n${workout.exercises.length} exercise(s) - '
                           '$totalSets set(s) - ${totalVolume.toStringAsFixed(0)} lbs total volume',
