@@ -185,12 +185,14 @@ class WorkoutProvider extends ChangeNotifier {
     required int exerciseId,
     required int reps,
     required double weight,
+    int? restSeconds,
   }) async {
     await _data.insertSet(
       SetEntry(
         exerciseId: exerciseId,
         reps: reps,
         weight: weight,
+        restSeconds: restSeconds,
       ),
     );
 
