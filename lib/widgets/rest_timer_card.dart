@@ -157,8 +157,7 @@ class _RestTimerCardState extends State<RestTimerCard> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: {..._presets, widget.initialSeconds}.toList()..sort()
-                ..map((seconds) {
+              children: ({..._presets, widget.initialSeconds}.toList()..sort()).map((seconds) {
                 return ChoiceChip(
                   selected: _selectedSeconds == seconds,
                   label: Text(
