@@ -103,6 +103,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
     }
 
     final totalSets = exercise.sets.length;
+    final overloadAdvice = provider.progressiveOverloadAdvice(exercise);
 
     return Scaffold(
       appBar: AppBar(
@@ -134,7 +135,29 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                 ),
               ),
             ),
-            const RestTimerCard(),
+            if (overloadAdvice != null) ...[
+              Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: Icon(
+                    overloadAdvice.startsWith('Last time') && overloadAdvice.contains('Increase')
+                        ? Icons.trending_up
+                        : Icons.history,
+                  ),
+                  title: Text(overloadAdvice.contains('Increase') ? 'Progressive overload' : 'Last session'),
+                  subtitle: Text(overloadAdvice),
+                ),
+              ),
+            ],
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const Icon(Icons.tune),
+                title: Text('${exercise.targetSets} × ${exercise.minReps}–${exercise.maxReps}'),
+                subtitle: Text('Rest ${exercise.restMinSeconds ~/ 60}:${(exercise.restMinSeconds % 60).toString().padLeft(2, '0')}–${exercise.restMaxSeconds ~/ 60}:${(exercise.restMaxSeconds % 60).toString().padLeft(2, '0')}'),
+              ),
+            ),
+            RestTimerCard(initialSeconds: exercise.restMaxSeconds),
             const SizedBox(height: 12),
             Expanded(
               child: exercise.sets.isEmpty
