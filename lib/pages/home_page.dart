@@ -50,6 +50,20 @@ class HomePage extends StatelessWidget {
     return streak;
   }
 
+  String? _scheduleLabel(Workout workout) {
+    final days = (workout.scheduledWeekdays ?? '').split(',').map(int.tryParse).whereType<int>().toList()..sort();
+    if (days.isEmpty) return null;
+    const names = {1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat',7:'Sun'};
+    final dayText = days.map((d) => names[d]).whereType<String>().join(', ');
+    final hour = workout.scheduledHour;
+    final minute = workout.scheduledMinute;
+    if (hour == null || minute == null) return dayText;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    final displayMinute = minute.toString().padLeft(2, '0');
+    return '$dayText · $displayHour:$displayMinute $period';
+  }
+
   Future<void> _showAddWorkoutDialog(BuildContext context) async {
     final controller = TextEditingController();
 
@@ -460,6 +474,7 @@ class HomePage extends StatelessWidget {
               return WorkoutCard(
                 title: workout.name,
                 exerciseCount: workout.exercises.length,
+                scheduleLabel: _scheduleLabel(workout),
                 onTap: () {
                   Navigator.push(
                     context,
