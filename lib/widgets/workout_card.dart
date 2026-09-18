@@ -7,6 +7,7 @@ class WorkoutCard extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onSchedule;
   final VoidCallback onDelete;
+  final int dragIndex;
 
   const WorkoutCard({
     required this.title,
@@ -15,13 +16,16 @@ class WorkoutCard extends StatelessWidget {
     required this.onRename,
     required this.onSchedule,
     required this.onDelete,
+    required this.dragIndex,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return ReorderableDragStartListener(
+      index: dragIndex,
+      child: Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
@@ -46,7 +50,6 @@ class WorkoutCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 44),
             PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
@@ -91,6 +94,7 @@ class WorkoutCard extends StatelessWidget {
           ],
         ),
         onTap: onTap,
+      ),
       ),
     );
   }
