@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class WorkoutCard extends StatelessWidget {
   final String title;
   final int exerciseCount;
+  final String? scheduleLabel;
   final VoidCallback onTap;
   final VoidCallback onRename;
   final VoidCallback onSchedule;
@@ -11,6 +12,7 @@ class WorkoutCard extends StatelessWidget {
   const WorkoutCard({
     required this.title,
     required this.exerciseCount,
+    this.scheduleLabel,
     required this.onTap,
     required this.onRename,
     required this.onSchedule,
@@ -39,8 +41,29 @@ class WorkoutCard extends StatelessWidget {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 3),
-          child: Text(
-            exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises'),
+              if (scheduleLabel != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 14, color: theme.colorScheme.primary),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        scheduleLabel!,
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
         trailing: PopupMenuButton<String>(
