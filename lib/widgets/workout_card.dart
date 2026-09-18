@@ -95,6 +95,7 @@ class WorkoutCard extends StatelessWidget {
         ),
         onTap: onTap,
       ),
+      ),
     );
   }
 }
