@@ -29,7 +29,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -53,6 +53,14 @@ class DatabaseService {
             'INTEGER',
           );
           await _createSocialTables(db);
+        }
+
+        if (oldVersion < 4) {
+          await _addColumnIfMissing(db, 'exercises', 'targetSets', 'INTEGER NOT NULL DEFAULT 3');
+          await _addColumnIfMissing(db, 'exercises', 'minReps', 'INTEGER NOT NULL DEFAULT 8');
+          await _addColumnIfMissing(db, 'exercises', 'maxReps', 'INTEGER NOT NULL DEFAULT 10');
+          await _addColumnIfMissing(db, 'exercises', 'restMinSeconds', 'INTEGER NOT NULL DEFAULT 90');
+          await _addColumnIfMissing(db, 'exercises', 'restMaxSeconds', 'INTEGER NOT NULL DEFAULT 90');
         }
       },
     );
@@ -86,6 +94,11 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         workoutId INTEGER NOT NULL,
         name TEXT NOT NULL,
+        targetSets INTEGER NOT NULL DEFAULT 3,
+        minReps INTEGER NOT NULL DEFAULT 8,
+        maxReps INTEGER NOT NULL DEFAULT 10,
+        restMinSeconds INTEGER NOT NULL DEFAULT 90,
+        restMaxSeconds INTEGER NOT NULL DEFAULT 90,
         FOREIGN KEY (workoutId) REFERENCES workouts(id) ON DELETE CASCADE
       )
     ''');
