@@ -115,7 +115,6 @@ class WorkoutProvider extends ChangeNotifier {
     final userId = _requireUserId();
     await _databaseService.claimLegacyData(userId);
     await _seedInitialDataIfNeeded();
-    await _databaseService.seedDemoFriendsIfNeeded(userId);
     await loadWorkouts();
     await loadHistory();
     await loadFriends();
