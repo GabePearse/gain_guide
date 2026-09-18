@@ -7,6 +7,7 @@ class WorkoutCard extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onSchedule;
   final VoidCallback onDelete;
+  final Widget reorderHandle;
 
   const WorkoutCard({
     required this.title,
@@ -15,6 +16,7 @@ class WorkoutCard extends StatelessWidget {
     required this.onRename,
     required this.onSchedule,
     required this.onDelete,
+    required this.reorderHandle,
     super.key,
   });
 
@@ -46,7 +48,6 @@ class WorkoutCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 44),
             PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
@@ -88,6 +89,8 @@ class WorkoutCard extends StatelessWidget {
             ),
           ],
             ),
+            const SizedBox(width: 8),
+            reorderHandle,
           ],
         ),
         onTap: onTap,
