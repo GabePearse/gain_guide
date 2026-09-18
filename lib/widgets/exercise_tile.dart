@@ -75,10 +75,13 @@ class ExerciseTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
         leading: Icon(
           Icons.add_task,
-          color: theme.colorScheme.secondary,
-          size: 21,
+          color: theme.colorScheme.primary,
+          size: 22,
         ),
         title: Text(
           name,
