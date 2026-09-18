@@ -123,14 +123,16 @@ class LogExercisesPage extends StatelessWidget {
                       child: Text('No exercises found for this workout.'),
                     )
                   : ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
                       itemCount: workout.exercises.length,
                       onReorderItem: (oldIndex, newIndex) {
                         context.read<WorkoutProvider>().reorderExercises(workoutId, oldIndex, newIndex);
                       },
                       itemBuilder: (context, index) {
                         final exercise = workout.exercises[index];
-                        return KeyedSubtree(
+                        return ReorderableDragStartListener(
                           key: ValueKey(exercise.id),
+                          index: index,
                           child: ExerciseTile(
                           name: exercise.name,
                           setCount: exercise.sets.length,
