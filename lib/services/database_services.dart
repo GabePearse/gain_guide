@@ -7,6 +7,7 @@ import '../models/friend_reminder.dart';
 import '../models/friend_summary.dart';
 import '../models/set_entry.dart';
 import '../models/workout.dart';
+import 'database_platform.dart';
 
 class DatabaseService {
   DatabaseService._internal();
@@ -24,6 +25,7 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
+    await configureDatabasePlatform();
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'gain_guide.db');
 
