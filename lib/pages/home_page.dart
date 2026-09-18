@@ -364,14 +364,21 @@ class HomePage extends StatelessWidget {
               ),
             )
           else
-            ...workouts.map((workout) {
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: workouts.length,
+              onReorder: (oldIndex, newIndex) => context.read<WorkoutProvider>().reorderWorkouts(oldIndex, newIndex),
+              itemBuilder: (context, index) {
+              final workout = workouts[index];
               final workoutId = workout.id;
 
               if (workoutId == null) {
-                return const SizedBox.shrink();
+                return SizedBox.shrink(key: ValueKey('missing-$index'));
               }
 
               return WorkoutCard(
+                key: ValueKey(workoutId),
                 title: workout.name,
                 exerciseCount: workout.exercises.length,
                 onTap: () {
@@ -394,7 +401,8 @@ class HomePage extends StatelessWidget {
                   workout.name,
                 ),
               );
-            }),
+              },
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
