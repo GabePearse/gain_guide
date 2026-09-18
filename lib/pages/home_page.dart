@@ -368,7 +368,10 @@ class HomePage extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: workouts.length,
-              onReorder: (oldIndex, newIndex) => context.read<WorkoutProvider>().reorderWorkouts(oldIndex, newIndex),
+              onReorderItem: (oldIndex, newIndex) {
+                context.read<WorkoutProvider>().reorderWorkouts(oldIndex, newIndex);
+                return true;
+              },
               itemBuilder: (context, index) {
               final workout = workouts[index];
               final workoutId = workout.id;
