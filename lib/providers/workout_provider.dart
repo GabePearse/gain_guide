@@ -102,6 +102,17 @@ class WorkoutProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reorderWorkouts(int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) newIndex -= 1;
+    final reordered = List<Workout>.from(_workouts);
+    final item = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, item);
+    _workouts = reordered;
+    notifyListeners();
+    await _data.reorderWorkouts(reordered);
+    await loadWorkouts();
+  }
+
   Future<void> addWorkout(String name) async {
     await _data.insertWorkout(name.trim());
     await loadWorkouts();
