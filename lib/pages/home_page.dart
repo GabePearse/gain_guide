@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/workout.dart';
@@ -7,7 +6,6 @@ import '../providers/workout_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
-import '../widgets/smart_reminder_banner.dart';
 import '../widgets/workout_card.dart';
 import 'log_exercises_page.dart';
 import 'workout_details_page.dart';
@@ -222,8 +220,6 @@ class HomePage extends StatelessWidget {
     final workouts = provider.workouts;
     final history = provider.history;
     final currentUser = provider.currentUser;
-    final reminder = provider.smartReminder;
-    final timeFormat = DateFormat('h:mm a');
     final streak = _currentStreak(history);
 
     return Scaffold(
@@ -263,7 +259,6 @@ class HomePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
-          const SmartReminderBanner(),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -329,86 +324,6 @@ class HomePage extends StatelessWidget {
               ],
             ),
           ),
-          if (reminder != null) ...[
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        reminder.isDueNow
-                            ? Icons.notifications_active_outlined
-                            : Icons.schedule,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          reminder.isDueNow
-                              ? 'Suggested now'
-                              : 'Suggested next',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                        ),
-                      ),
-                      Text(
-                        '${reminder.confidence}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    reminder.workout.name,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Usually around ${timeFormat.format(reminder.usualTime)}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.76),
-                        ),
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.ink,
-                    ),
-                    onPressed: reminder.workout.id == null
-                        ? null
-                        : () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => LogExercisesPage(
-                                  workoutId: reminder.workout.id!,
-                                ),
-                              ),
-                            );
-                          },
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start Workout'),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 18),
           Row(
             children: [
