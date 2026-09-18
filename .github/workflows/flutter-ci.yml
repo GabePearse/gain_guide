@@ -33,6 +33,9 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Build web PWA
+        run: flutter build web --release
+
       - name: Test
         shell: bash
         run: |
