@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'friends_page.dart';
 import 'history_page.dart';
 import 'home_page.dart';
 import 'progress_page.dart';
@@ -19,7 +18,6 @@ class _MainScaffoldState extends State<MainScaffold> {
     HomePage(),
     HistoryPage(),
     ProgressPage(),
-    FriendsPage(),
   ];
 
   @override
@@ -55,11 +53,6 @@ class _MainScaffoldState extends State<MainScaffold> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Progress',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_alt_outlined),
-            selectedIcon: Icon(Icons.people_alt),
-            label: 'Friends',
           ),
         ],
       ),
