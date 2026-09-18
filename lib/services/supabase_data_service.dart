@@ -43,6 +43,7 @@ class SupabaseDataService {
   Future<void> deleteExercise(int id)=>_db.from('exercises').delete().eq('id',id);
   Future<void> insertSet(SetEntry s)=>_db.from('set_entries').insert({'exercise_id':s.exerciseId,'reps':s.reps,'weight':s.weight});
   Future<void> deleteSet(int id)=>_db.from('set_entries').delete().eq('id',id);
+  Future<void> deleteCompletedWorkout(int id)=>_db.from('completed_workouts').delete().eq('id',id).eq('user_id',userId);
 
   Future<void> completeWorkout(Workout w) async {
     final cw=await _db.from('completed_workouts').insert({'user_id':userId,'name':w.name,'completed_at':DateTime.now().toUtc().toIso8601String()}).select('id').single();
