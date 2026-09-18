@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_navigation.dart';
 import 'pages/auth_page.dart';
@@ -10,6 +11,11 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://pfrqedznfuuzzueptwed.supabase.co',
+    anonKey: 'sb_publishable_L6mWwu0Gy2mIyZTu2U_xFw_L0Nvkv7U',
+  );
+
   if (!kIsWeb) {
     await NotificationService.instance.initialize();
   }
