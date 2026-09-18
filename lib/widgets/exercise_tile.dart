@@ -72,12 +72,8 @@ class ExerciseTile extends StatelessWidget {
     }
 
     return Card(
-      clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: theme.colorScheme.primary.withValues(alpha: 0.06),
-        child: ListTile(
+      child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
         leading: Icon(
           Icons.add_task,
@@ -97,6 +93,9 @@ class ExerciseTile extends StatelessWidget {
                 ),
               ),
         trailing: trailing,
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
     );
