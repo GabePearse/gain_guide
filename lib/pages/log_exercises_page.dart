@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../providers/workout_provider.dart';
 import '../widgets/exercise_tile.dart';
-import '../widgets/rest_timer_card.dart';
 import 'log_workout_page.dart';
 
 class LogExercisesPage extends StatelessWidget {
@@ -115,8 +114,6 @@ class LogExercisesPage extends StatelessWidget {
                 ),
               ),
             ),
-            const RestTimerCard(),
-            const SizedBox(height: 12),
             Expanded(
               child: workout.exercises.isEmpty
                   ? const Center(
