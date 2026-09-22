@@ -209,11 +209,21 @@ class WorkoutProvider extends ChangeNotifier {
     required int reps,
     required double weight,
   }) async {
+    final exercise = getExerciseById(exerciseId);
+    final completedAt = DateTime.now();
+    final previousCompletedAt = exercise?.sets.isEmpty == false
+        ? exercise!.sets.last.completedAt
+        : null;
+    final restSeconds = previousCompletedAt == null
+        ? null
+        : completedAt.difference(previousCompletedAt).inSeconds.clamp(0, 86400);
     await _data.insertSet(
       SetEntry(
         exerciseId: exerciseId,
         reps: reps,
         weight: weight,
+        restSeconds: restSeconds,
+        completedAt: completedAt,
       ),
     );
 
