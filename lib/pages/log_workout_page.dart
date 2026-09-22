@@ -73,15 +73,36 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
     if (!mounted) return;
     _weightFocusNode.requestFocus();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Set added')),
+    final loggedExercise = context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
+    final addedSetId = loggedExercise?.sets.isNotEmpty == true
+        ? loggedExercise!.sets.last.id
+        : null;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Set added'),
+        action: addedSetId == null
+            ? null
+            : SnackBarAction(
+                label: 'UNDO',
+                onPressed: () => _deleteSet(
+                  addedSetId,
+                  showConfirmation: false,
+                ),
+              ),
+      ),
     );
   }
 
-  Future<void> _deleteSet(int setEntryId) async {
+  Future<void> _deleteSet(
+    int setEntryId, {
+    bool showConfirmation = true,
+  }) async {
     await context.read<WorkoutProvider>().deleteSetEntry(setEntryId);
 
-    if (!mounted) return;
+    if (!mounted || !showConfirmation) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Set removed')),
     );
