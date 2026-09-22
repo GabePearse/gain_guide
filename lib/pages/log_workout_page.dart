@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/workout_provider.dart';
-import '../widgets/rest_timer_card.dart';
 
 class LogWorkoutPage extends StatefulWidget {
   final int workoutId;
@@ -178,8 +177,6 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                 subtitle: Text('Rest ${exercise.restMinSeconds ~/ 60}:${(exercise.restMinSeconds % 60).toString().padLeft(2, '0')}–${exercise.restMaxSeconds ~/ 60}:${(exercise.restMaxSeconds % 60).toString().padLeft(2, '0')}'),
               ),
             ),
-            RestTimerCard(initialSeconds: exercise.restMaxSeconds),
-            const SizedBox(height: 12),
             Expanded(
               child: exercise.sets.isEmpty
                   ? const Center(
@@ -196,7 +193,9 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                           child: ListTile(
                             title: Text('Set ${index + 1}'),
                             subtitle: Text(
-                              '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps',
+                              set.restSeconds == null
+                                  ? '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps'
+                                  : '${set.weight.toStringAsFixed(1)} lbs x ${set.reps} reps · Rest ${set.restSeconds! ~/ 60}:${(set.restSeconds! % 60).toString().padLeft(2, '0')}',
                             ),
                             trailing: set.id == null
                                 ? null
