@@ -213,6 +213,19 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  String? _scheduleLabel(String? scheduledWeekdays) {
+    if (scheduledWeekdays == null || scheduledWeekdays.trim().isEmpty) return null;
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final days = scheduledWeekdays
+        .split(',')
+        .map((value) => int.tryParse(value.trim()))
+        .whereType<int>()
+        .where((day) => day >= 1 && day <= 7)
+        .map((day) => names[day - 1])
+        .toList();
+    return days.isEmpty ? null : days.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WorkoutProvider>();
@@ -379,6 +392,7 @@ class HomePage extends StatelessWidget {
               itemBuilder: (context, index) {
               final workout = workouts[index];
               final workoutId = workout.id;
+              final scheduleLabel = _scheduleLabel(workout.scheduledWeekdays);
 
               if (workoutId == null) {
                 return SizedBox.shrink(key: ValueKey('missing-$index'));
@@ -387,6 +401,7 @@ class HomePage extends StatelessWidget {
               return WorkoutCard(
                 key: ValueKey(workoutId),
                 dragIndex: index,
+                scheduleLabel: scheduleLabel,
                 title: workout.name,
                 exerciseCount: workout.exercises.length,
                 onTap: () {
