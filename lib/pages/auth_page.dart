@@ -88,6 +88,19 @@ class _AuthPageState extends State<AuthPage> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        if (!mounted) return;
+        _passwordController.clear();
+        setState(() {
+          _isCreatingAccount = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Account created. Check your email to verify your account, then sign in.',
+            ),
+          ),
+        );
       } else {
         final signedIn = await provider.signIn(
           email: _emailController.text,
@@ -246,6 +259,7 @@ class _AuthPageState extends State<AuthPage> {
                         : () {
                             setState(() {
                               _isCreatingAccount = !_isCreatingAccount;
+                              _passwordController.clear();
                             });
                           },
                     child: Text(
