@@ -11,7 +11,7 @@ class SupabaseDataService {
 
   Future<List<Workout>> getWorkouts() async {
     final rows = await _db.from('workouts').select('*, exercises(*, set_entries(*))').eq('user_id', userId).order('sort_order').order('id');
-    return (rows as List).map((r) {
+    final workouts = (rows as List).map((r) {
       final m=Map<String,dynamic>.from(r);
       final exerciseRows=List<Map<String,dynamic>>.from((m['exercises'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e)))..sort((a,b){ final c=(a['sort_order'] as int? ?? 0).compareTo(b['sort_order'] as int? ?? 0); return c != 0 ? c : (a['id'] as int).compareTo(b['id'] as int); });
       final exercises=exerciseRows.map((e) {
@@ -21,6 +21,11 @@ class SupabaseDataService {
       }).toList();
       return Workout(id:m['id'] as int,name:m['name'],exercises:exercises,scheduledWeekdays:m['scheduled_weekdays'],scheduledHour:m['scheduled_hour'],scheduledMinute:m['scheduled_minute'],sortOrder:m['sort_order'] as int? ?? 0);
     }).toList();
+    workouts.sort((a, b) {
+      final byOrder = a.sortOrder.compareTo(b.sortOrder);
+      return byOrder != 0 ? byOrder : (a.id ?? 0).compareTo(b.id ?? 0);
+    });
+    return workouts;
   }
 
   Future<List<Workout>> getHistory() async {
