@@ -103,7 +103,6 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> reorderWorkouts(int oldIndex, int newIndex) async {
-    if (oldIndex < newIndex) newIndex -= 1;
     final reordered = List<Workout>.from(_workouts);
     final item = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, item);
@@ -163,6 +162,7 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> reorderExercises(int workoutId, int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) newIndex -= 1;
     final workoutIndex = _workouts.indexWhere((w) => w.id == workoutId);
     if (workoutIndex < 0) return;
     final exercises = List<Exercise>.from(_workouts[workoutIndex].exercises);
