@@ -8,6 +8,7 @@ class WorkoutCard extends StatelessWidget {
   final VoidCallback onSchedule;
   final VoidCallback onDelete;
   final int dragIndex;
+  final String? scheduleLabel;
 
   const WorkoutCard({
     required this.title,
@@ -17,13 +18,14 @@ class WorkoutCard extends StatelessWidget {
     required this.onSchedule,
     required this.onDelete,
     required this.dragIndex,
+    this.scheduleLabel,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ReorderableDragStartListener(
+    return ReorderableDelayedDragStartListener(
       index: dragIndex,
       child: Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -44,7 +46,9 @@ class WorkoutCard extends StatelessWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 3),
           child: Text(
-            exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises',
+            scheduleLabel == null
+                ? (exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises')
+                : '${exerciseCount == 1 ? '1 exercise' : '$exerciseCount exercises'} · $scheduleLabel',
           ),
         ),
         trailing: Row(
