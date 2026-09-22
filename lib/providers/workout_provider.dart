@@ -217,17 +217,30 @@ class WorkoutProvider extends ChangeNotifier {
     final restSeconds = previousCompletedAt == null
         ? null
         : completedAt.difference(previousCompletedAt).inSeconds.clamp(0, 86400);
-    await _data.insertSet(
-      SetEntry(
-        exerciseId: exerciseId,
-        reps: reps,
-        weight: weight,
-        restSeconds: restSeconds,
-        completedAt: completedAt,
-      ),
+    final pendingSet = SetEntry(
+      exerciseId: exerciseId,
+      reps: reps,
+      weight: weight,
+      restSeconds: restSeconds,
+      completedAt: completedAt,
     );
 
-    await loadWorkouts();
+    // Update the UI immediately instead of waiting for Supabase + a full reload.
+    if (exercise != null) {
+      exercise.sets.add(pendingSet);
+      notifyListeners();
+    }
+
+    try {
+      await _data.insertSet(pendingSet);
+      await loadWorkouts();
+    } catch (_) {
+      if (exercise != null) {
+        exercise.sets.remove(pendingSet);
+        notifyListeners();
+      }
+      rethrow;
+    }
   }
 
   Future<void> deleteSetEntry(int setEntryId) async {
