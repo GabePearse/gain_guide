@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,9 +24,20 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
   final TextEditingController _repsController = TextEditingController();
   final FocusNode _weightFocusNode = FocusNode();
   final FocusNode _repsFocusNode = FocusNode();
+  Timer? _restClock;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _restClock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
 
   @override
   void dispose() {
+    _restClock?.cancel();
     _weightController.dispose();
     _repsController.dispose();
     _weightFocusNode.dispose();
@@ -124,6 +137,13 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
     final totalSets = exercise.sets.length;
     final overloadAdvice = provider.progressiveOverloadAdvice(exercise);
+    final lastCompletedAt = exercise.sets.isEmpty ? null : exercise.sets.last.completedAt;
+    final elapsedSeconds = lastCompletedAt == null
+        ? null
+        : _now.difference(lastCompletedAt).inSeconds.clamp(0, 86400);
+    final elapsedText = elapsedSeconds == null
+        ? null
+        : '${elapsedSeconds ~/ 60}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}';
 
     return Scaffold(
       appBar: AppBar(
@@ -177,6 +197,21 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                 subtitle: Text('Rest ${exercise.restMinSeconds ~/ 60}:${(exercise.restMinSeconds % 60).toString().padLeft(2, '0')}–${exercise.restMaxSeconds ~/ 60}:${(exercise.restMaxSeconds % 60).toString().padLeft(2, '0')}'),
               ),
             ),
+            if (elapsedText != null)
+              Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.timer_outlined),
+                  title: const Text('Time since last set'),
+                  trailing: Text(
+                    elapsedText,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                  ),
+                ),
+              ),
             Expanded(
               child: exercise.sets.isEmpty
                   ? const Center(
