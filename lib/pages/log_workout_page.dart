@@ -26,6 +26,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
   final FocusNode _repsFocusNode = FocusNode();
   Timer? _restClock;
   DateTime _now = DateTime.now();
+  DateTime? _sessionLastSetAt;
 
   @override
   void initState() {
@@ -79,10 +80,15 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
           weight: weight,
         );
 
+    if (!mounted) return;
+    setState(() {
+      _sessionLastSetAt = DateTime.now();
+      _now = _sessionLastSetAt!;
+    });
+
     _weightController.clear();
     _repsController.clear();
 
-    if (!mounted) return;
     _weightFocusNode.requestFocus();
 
     final loggedExercise = context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
@@ -137,10 +143,9 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
     final totalSets = exercise.sets.length;
     final overloadAdvice = provider.progressiveOverloadAdvice(exercise);
-    final lastCompletedAt = exercise.sets.isEmpty ? null : exercise.sets.last.completedAt;
-    final elapsedSeconds = lastCompletedAt == null
+    final elapsedSeconds = _sessionLastSetAt == null
         ? null
-        : _now.difference(lastCompletedAt).inSeconds.clamp(0, 86400);
+        : _now.difference(_sessionLastSetAt!).inSeconds.clamp(0, 86400);
     final elapsedText = elapsedSeconds == null
         ? null
         : '${elapsedSeconds ~/ 60}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}';
