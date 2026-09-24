@@ -27,6 +27,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
   Timer? _restClock;
   DateTime _now = DateTime.now();
   DateTime? _sessionLastSetAt;
+  int? _stoppedRestSeconds;
 
   @override
   void initState() {
@@ -84,6 +85,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
     setState(() {
       _sessionLastSetAt = DateTime.now();
       _now = _sessionLastSetAt!;
+      _stoppedRestSeconds = null;
     });
 
     _weightController.clear();
@@ -145,7 +147,8 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
     final overloadAdvice = provider.progressiveOverloadAdvice(exercise);
     final elapsedSeconds = _sessionLastSetAt == null
         ? null
-        : _now.difference(_sessionLastSetAt!).inSeconds.clamp(0, 86400);
+        : (_stoppedRestSeconds ??
+            _now.difference(_sessionLastSetAt!).inSeconds.clamp(0, 86400));
     final elapsedText = elapsedSeconds == null
         ? null
         : '${elapsedSeconds ~/ 60}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}';
@@ -208,12 +211,33 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                 child: ListTile(
                   leading: const Icon(Icons.timer_outlined),
                   title: const Text('Time since last set'),
-                  trailing: Text(
-                    elapsedText,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        elapsedText,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_stoppedRestSeconds == null)
+                        FilledButton.tonalIcon(
+                          onPressed: () {
+                            setState(() {
+                              _stoppedRestSeconds = _now
+                                  .difference(_sessionLastSetAt!)
+                                  .inSeconds
+                                  .clamp(0, 86400);
+                            });
+                          },
+                          icon: const Icon(Icons.stop, size: 18),
+                          label: const Text('Stop Rest'),
+                        )
+                      else
+                        const Icon(Icons.check_circle_outline),
+                    ],
                   ),
                 ),
               ),
