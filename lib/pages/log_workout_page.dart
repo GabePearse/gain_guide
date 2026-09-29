@@ -93,27 +93,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
     _weightFocusNode.requestFocus();
 
-    final loggedExercise = context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
-    final addedSetId = loggedExercise?.sets.isNotEmpty == true
-        ? loggedExercise!.sets.last.id
-        : null;
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: const Text('Set added'),
-        action: addedSetId == null
-            ? null
-            : SnackBarAction(
-                label: 'UNDO',
-                onPressed: () => _deleteSet(
-                  addedSetId,
-                  showConfirmation: false,
-                ),
-              ),
-      ),
-    );
   }
 
   Future<void> _deleteSet(
