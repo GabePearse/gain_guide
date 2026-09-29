@@ -440,10 +440,14 @@ class WorkoutProvider extends ChangeNotifier {
         final hitTopRange = enoughSets && sets.take(exercise.targetSets).every((set) => set.reps >= exercise.maxReps);
         final sameWeight = sets.take(exercise.targetSets).map((set) => set.weight).toSet().length == 1;
         final weight = sets.first.weight;
+        final completedSets = sets.length;
+        final plannedSets = previous.targetSets;
+        final lastSessionSummary =
+            '${weight.toStringAsFixed(1)} lbs for $completedSets/$plannedSets sets';
         if (hitTopRange && sameWeight) {
-          return 'Last time: ${weight.toStringAsFixed(1)} lbs for ${sets.take(exercise.targetSets).map((s) => s.reps).join('/')} reps. Increase the weight this session.';
+          return 'Last time: $lastSessionSummary. Increase the weight this session.';
         }
-        return 'Last time: ${sets.map((s) => '${s.weight.toStringAsFixed(1)}×${s.reps}').join(', ')}. Stay at the weight until you reach ${exercise.maxReps} reps on all ${exercise.targetSets} sets.';
+        return 'Last time: $lastSessionSummary. Stay at ${weight.toStringAsFixed(1)} lbs until you reach ${exercise.maxReps} reps on all ${exercise.targetSets} sets.';
       }
     }
     return null;
