@@ -93,27 +93,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
     _weightFocusNode.requestFocus();
 
-    final loggedExercise = context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
-    final addedSetId = loggedExercise?.sets.isNotEmpty == true
-        ? loggedExercise!.sets.last.id
-        : null;
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: const Text('Set added'),
-        action: addedSetId == null
-            ? null
-            : SnackBarAction(
-                label: 'UNDO',
-                onPressed: () => _deleteSet(
-                  addedSetId,
-                  showConfirmation: false,
-                ),
-              ),
-      ),
-    );
   }
 
   Future<void> _deleteSet(
@@ -165,38 +145,79 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
               margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: _ExerciseStat(
-                        label: 'Workout',
-                        value: workout.name,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ExerciseStat(
+                            label: 'Workout',
+                            value: workout.name,
+                          ),
+                        ),
+                        Expanded(
+                          child: _ExerciseStat(
+                            label: 'Total Sets',
+                            value: '$totalSets',
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: _ExerciseStat(
-                        label: 'Total Sets',
-                        value: '$totalSets',
+                    if (overloadAdvice != null) ...[
+                      const Divider(height: 32),
+                      Builder(
+                        builder: (context) {
+                          final parts = overloadAdvice.split('. ');
+                          final lastSession =
+                              parts.first.replaceFirst('Last time: ', '');
+                          final recommendation = parts.length > 1
+                              ? parts.sublist(1).join('. ')
+                              : '';
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(Icons.history),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Last session',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(lastSession),
+                                    if (recommendation.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Recommended',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(recommendation),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
             ),
-            if (overloadAdvice != null) ...[
-              Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: Icon(
-                    overloadAdvice.startsWith('Last time') && overloadAdvice.contains('Increase')
-                        ? Icons.trending_up
-                        : Icons.history,
-                  ),
-                  title: Text(overloadAdvice.contains('Increase') ? 'Progressive overload' : 'Last session'),
-                  subtitle: Text(overloadAdvice),
-                ),
-              ),
-            ],
+
             Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
