@@ -184,17 +184,53 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
               ),
             ),
             if (overloadAdvice != null) ...[
-              Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: Icon(
-                    overloadAdvice.startsWith('Last time') && overloadAdvice.contains('Increase')
-                        ? Icons.trending_up
-                        : Icons.history,
-                  ),
-                  title: Text(overloadAdvice.contains('Increase') ? 'Progressive overload' : 'Last session'),
-                  subtitle: Text(overloadAdvice),
-                ),
+              Builder(
+                builder: (context) {
+                  final parts = overloadAdvice.split('. ');
+                  final lastSession = parts.first.replaceFirst('Last time: ', '');
+                  final recommendation = parts.length > 1
+                      ? parts.sublist(1).join('. ')
+                      : '';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Icon(Icons.history),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Last session',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(lastSession),
+                                if (recommendation.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Recommended',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(recommendation),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
             Card(
