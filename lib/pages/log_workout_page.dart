@@ -170,10 +170,6 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                           final parts = overloadAdvice.split('. ');
                           final lastSession =
                               parts.first.replaceFirst('Last time: ', '');
-                          final recommendation = parts.length > 1
-                              ? parts.sublist(1).join('. ')
-                              : '';
-
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -194,17 +190,6 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(lastSession),
-                                    if (recommendation.isNotEmpty) ...[
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Recommended',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(recommendation),
-                                    ],
                                   ],
                                 ),
                               ),
