@@ -170,6 +170,9 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                           final parts = overloadAdvice.split('. ');
                           final lastSession =
                               parts.first.replaceFirst('Last time: ', '');
+                          final recommendation = parts.length > 1
+                              ? parts.sublist(1).join('. ')
+                              : '';
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
