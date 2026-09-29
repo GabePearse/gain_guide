@@ -190,6 +190,17 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(lastSession),
+                                    if (recommendation.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Recommended',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(recommendation),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -203,14 +214,6 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
               ),
             ),
 
-            Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: const Icon(Icons.tune),
-                title: Text('${exercise.targetSets} × ${exercise.minReps}–${exercise.maxReps}'),
-                subtitle: Text('Rest ${exercise.restMinSeconds ~/ 60}:${(exercise.restMinSeconds % 60).toString().padLeft(2, '0')}–${exercise.restMaxSeconds ~/ 60}:${(exercise.restMaxSeconds % 60).toString().padLeft(2, '0')}'),
-              ),
-            ),
             if (elapsedText != null)
               Card(
                 margin: const EdgeInsets.only(bottom: 12),
