@@ -243,6 +243,11 @@ class WorkoutProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateSetRestSeconds(int setEntryId, int restSeconds) async {
+    await _data.updateSetRestSeconds(setEntryId, restSeconds);
+    await loadWorkouts();
+  }
+
   Future<void> deleteSetEntry(int setEntryId) async {
     await _data.deleteSet(setEntryId);
     await loadWorkouts();

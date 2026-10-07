@@ -96,6 +96,38 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
   }
 
+  Future<void> _stopRestTimer() async {
+    final lastSetAt = _sessionLastSetAt;
+    if (lastSetAt == null || _stoppedRestSeconds != null) return;
+
+    final stoppedSeconds =
+        _now.difference(lastSetAt).inSeconds.clamp(0, 86400);
+    final exercise =
+        context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
+    final setEntryId =
+        exercise == null || exercise.sets.isEmpty ? null : exercise.sets.last.id;
+
+    setState(() {
+      _stoppedRestSeconds = stoppedSeconds;
+    });
+
+    if (setEntryId == null) return;
+
+    try {
+      await context
+          .read<WorkoutProvider>()
+          .updateSetRestSeconds(setEntryId, stoppedSeconds);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _stoppedRestSeconds = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save rest time')),
+      );
+    }
+  }
+
   Future<void> _deleteSet(
     int setEntryId, {
     bool showConfirmation = true,
@@ -213,14 +245,7 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
                       const SizedBox(width: 8),
                       if (_stoppedRestSeconds == null)
                         FilledButton.tonalIcon(
-                          onPressed: () {
-                            setState(() {
-                              _stoppedRestSeconds = _now
-                                  .difference(_sessionLastSetAt!)
-                                  .inSeconds
-                                  .clamp(0, 86400);
-                            });
-                          },
+                          onPressed: _stopRestTimer,
                           icon: const Icon(Icons.stop, size: 18),
                           label: const Text('Stop Rest'),
                         )
