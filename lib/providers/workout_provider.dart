@@ -211,17 +211,12 @@ class WorkoutProvider extends ChangeNotifier {
   }) async {
     final exercise = getExerciseById(exerciseId);
     final completedAt = DateTime.now();
-    final previousCompletedAt = exercise?.sets.isEmpty == false
-        ? exercise!.sets.last.completedAt
-        : null;
-    final restSeconds = previousCompletedAt == null
-        ? null
-        : completedAt.difference(previousCompletedAt).inSeconds.clamp(0, 86400);
     final pendingSet = SetEntry(
       exerciseId: exerciseId,
       reps: reps,
       weight: weight,
-      restSeconds: restSeconds,
+      // Rest belongs to this set and is persisted when Stop Rest is pressed.
+      restSeconds: null,
       completedAt: completedAt,
     );
 
