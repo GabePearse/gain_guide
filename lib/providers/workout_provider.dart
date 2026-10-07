@@ -431,23 +431,26 @@ class WorkoutProvider extends ChangeNotifier {
     );
   }
 
-  String? progressiveOverloadAdvice(Exercise exercise) {
+  String? lastSessionSummary(Exercise exercise) {
     for (final workout in _history) {
       for (final previous in workout.exercises) {
-        if (previous.name.toLowerCase() != exercise.name.toLowerCase() || previous.sets.isEmpty) continue;
-        final sets = previous.sets;
-        final enoughSets = sets.length >= exercise.targetSets;
-        final hitTopRange = enoughSets && sets.take(exercise.targetSets).every((set) => set.reps >= exercise.maxReps);
-        final sameWeight = sets.take(exercise.targetSets).map((set) => set.weight).toSet().length == 1;
-        final weight = sets.first.weight;
-        final completedSets = sets.length;
-        final plannedSets = previous.targetSets;
-        final lastSessionSummary =
-            '${weight.toStringAsFixed(1)} lbs for $completedSets/$plannedSets sets';
-        if (hitTopRange && sameWeight) {
-          return 'Last time: $lastSessionSummary. Increase the weight this session.';
+        if (previous.name.toLowerCase() != exercise.name.toLowerCase() ||
+            previous.sets.isEmpty) {
+          continue;
         }
-        return 'Last time: $lastSessionSummary. Stay at ${weight.toStringAsFixed(1)} lbs until you reach ${exercise.maxReps} reps on all ${exercise.targetSets} sets.';
+
+        final completedSets = previous.sets.length;
+        final plannedSets = previous.targetSets;
+        final setDetails = previous.sets
+            .asMap()
+            .entries
+            .map(
+              (entry) =>
+                  'Set ${entry.key + 1}: ${entry.value.weight.toStringAsFixed(1)} lbs × ${entry.value.reps} reps',
+            )
+            .join('\n');
+
+        return '$completedSets/$plannedSets sets\n$setDetails';
       }
     }
     return null;
