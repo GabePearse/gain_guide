@@ -239,8 +239,46 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> updateSetRestSeconds(int setEntryId, int restSeconds) async {
-    await _data.updateSetRestSeconds(setEntryId, restSeconds);
-    await loadWorkouts();
+    Exercise? targetExercise;
+    var targetIndex = -1;
+
+    for (final workout in _workouts) {
+      final index = workout.exercises
+          .expand((exercise) => exercise.sets)
+          .toList()
+          .indexWhere((set) => set.id == setEntryId);
+      if (index < 0) continue;
+
+      for (final exercise in workout.exercises) {
+        final setIndex = exercise.sets.indexWhere((set) => set.id == setEntryId);
+        if (setIndex >= 0) {
+          targetExercise = exercise;
+          targetIndex = setIndex;
+          break;
+        }
+      }
+      if (targetExercise != null) break;
+    }
+
+    final previousSet =
+        targetExercise == null || targetIndex < 0 ? null : targetExercise.sets[targetIndex];
+
+    if (previousSet != null) {
+      targetExercise!.sets[targetIndex] = previousSet.copyWith(
+        restSeconds: restSeconds,
+      );
+      notifyListeners();
+    }
+
+    try {
+      await _data.updateSetRestSeconds(setEntryId, restSeconds);
+    } catch (_) {
+      if (previousSet != null) {
+        targetExercise!.sets[targetIndex] = previousSet;
+        notifyListeners();
+      }
+      rethrow;
+    }
   }
 
   Future<void> deleteSetEntry(int setEntryId) async {
