@@ -208,6 +208,7 @@ class WorkoutProvider extends ChangeNotifier {
     required int exerciseId,
     required int reps,
     required double weight,
+    int? restSeconds,
   }) async {
     final exercise = getExerciseById(exerciseId);
     final completedAt = DateTime.now();
@@ -215,8 +216,8 @@ class WorkoutProvider extends ChangeNotifier {
       exerciseId: exerciseId,
       reps: reps,
       weight: weight,
-      // Rest belongs to this set and is persisted when Stop Rest is pressed.
-      restSeconds: null,
+      // Rest is the stopped interval immediately before this set.
+      restSeconds: restSeconds,
       completedAt: completedAt,
     );
 
