@@ -79,7 +79,6 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
           exerciseId: widget.exerciseId,
           reps: reps,
           weight: weight,
-          restSeconds: _stoppedRestSeconds,
         );
 
     if (!mounted) return;
@@ -103,9 +102,30 @@ class _LogWorkoutPageState extends State<LogWorkoutPage> {
 
     final stoppedSeconds =
         _now.difference(lastSetAt).inSeconds.clamp(0, 86400);
+    final exercise =
+        context.read<WorkoutProvider>().getExerciseById(widget.exerciseId);
+    final setEntryId =
+        exercise == null || exercise.sets.isEmpty ? null : exercise.sets.last.id;
+
     setState(() {
       _stoppedRestSeconds = stoppedSeconds;
     });
+
+    if (setEntryId == null) return;
+
+    try {
+      await context
+          .read<WorkoutProvider>()
+          .updateSetRestSeconds(setEntryId, stoppedSeconds);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _stoppedRestSeconds = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save rest time')),
+      );
+    }
   }
 
   Future<void> _deleteSet(
