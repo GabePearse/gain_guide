@@ -206,7 +206,7 @@ final class HealthBridge {
         let query = HKStatisticsCollectionQuery(quantityType: type, quantitySamplePredicate: predicate,
             options: options, anchorDate: start, intervalComponents: interval)
         query.initialResultsHandler = { _, collection, error in
-            if let e = error as NSError?, e.domain == HKErrorDomain && e.code == HKError.Code.errorNoData.rawValue {
+            if #available(iOS 14.0, *), let e = error as NSError?, e.domain == HKErrorDomain && e.code == HKError.Code.errorNoData.rawValue {
                 DispatchQueue.main.async { reply([]) }
                 return
             }
