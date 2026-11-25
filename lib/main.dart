@@ -17,11 +17,11 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_L6mWwu0Gy2mIyZTu2U_xFw_L0Nvkv7U',
   );
 
+  await AppleHealthService.instance.initialize();
+
   if (!kIsWeb) {
     await NotificationService.instance.initialize();
   }
-
-  await AppleHealthService.instance.initialize();
 
   runApp(
     ChangeNotifierProvider(

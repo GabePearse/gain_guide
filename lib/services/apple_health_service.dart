@@ -44,6 +44,8 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
   String? error;
   DateTime? lastSync;
   Future<void>? _flight;
+  Future<void>? _delivery;
+  bool _observerPending = false;
   Timer? _retry;
   int _failures = 0;
   int _generation = 0;
@@ -52,7 +54,12 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
     if (!ios) return;
     WidgetsBinding.instance.addObserver(this);
     channel.setMethodCallHandler((call) async {
-      if (call.method == 'changed') await sync();
+      if (call.method == 'changed') {
+        _observerPending = true;
+        await (_delivery ??= _drainObservers().whenComplete(
+          () => _delivery = null,
+        ));
+      }
     });
     String? activeOwner = owner;
     db.auth.onAuthStateChange.listen((event) {
@@ -73,6 +80,16 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
     });
     await channel.invokeMethod<void>('ready');
     unawaited(sync());
+  }
+
+  // An observer can arrive after its metric was read by an active sync.
+  // Coalesce notifications and perform a subsequent pass before replying.
+  Future<void> _drainObservers() async {
+    await _flight;
+    while (_observerPending) {
+      _observerPending = false;
+      await sync();
+    }
   }
 
   @override
