@@ -1,3 +1,4 @@
+import 'services/apple_health_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,8 @@ Future<void> main() async {
     url: 'https://pfrqedznfuuzzueptwed.supabase.co',
     publishableKey: 'sb_publishable_L6mWwu0Gy2mIyZTu2U_xFw_L0Nvkv7U',
   );
+
+  await AppleHealthService.instance.initialize();
 
   if (!kIsWeb) {
     await NotificationService.instance.initialize();

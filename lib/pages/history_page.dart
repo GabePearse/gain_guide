@@ -91,15 +91,27 @@ class HistoryPage extends StatelessWidget {
       return;
     }
 
+    final confirmed = await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Copy fitness data?'),
+      content:const Text('The export includes workouts and synchronized health readings for this date range. Other apps may be able to read your clipboard.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Copy export'))]));
+    if(confirmed!=true || !context.mounted) return;
+    try {
     final exportText = await context.read<WorkoutProvider>().buildWorkoutExport(
           start: range.start,
           end: range.end,
         );
+    if (!context.mounted) return;
     await Clipboard.setData(ClipboardData(text: exportText));
 
+    } catch (_) {
+      if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Export failed. Check your connection and retry.')));
+      return;
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Workout export copied to clipboard')),
+      const SnackBar(content: Text('Fitness export copied to clipboard')),
     );
   }
 
