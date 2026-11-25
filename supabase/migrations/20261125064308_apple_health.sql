@@ -107,13 +107,20 @@ end $$;
 -- Split asleep intervals at reporting-zone midnight. Union overlapping stages
 -- and sources before summing duration (including across DST transitions).
 create view public.health_daily with (security_invoker=true) as
+with discrete as (
+ select s.*, (started at time zone zone)::date local_day,
+   dense_rank() over(partition by user_id,metric,(started at time zone zone)::date
+     order by (bundle like 'com.apple.%') desc,bundle) source_priority
+ from public.health_sample s
+ where metric in ('weight','lean_mass','body_fat','bmi','resting_hr','hrv','respiration')
+)
 select user_id,day,metric,unit,value from public.health_stat
 union all
-select user_id,(started at time zone zone)::date,metric,unit,
+select user_id,local_day,metric,unit,
   case when metric in ('weight','lean_mass','body_fat','bmi') then
     (array_agg(value order by started desc,id))[1] else avg(value) end
-from public.health_sample where metric in ('weight','lean_mass','body_fat','bmi','resting_hr','hrv','respiration')
-group by user_id,(started at time zone zone)::date,metric,unit
+from discrete where metric in ('weight','lean_mass','body_fat','bmi') or source_priority=1
+group by user_id,local_day,metric,unit
 union all
 select user_id,day,'sleep','h',sum(extract(epoch from upper(r)-lower(r)))/3600
 from (

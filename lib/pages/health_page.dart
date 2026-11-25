@@ -272,6 +272,7 @@ class _HealthPageState extends State<HealthPage> {
   String period = 'Day';
   DateTime date = DateTime.now();
   late Future<List<HealthRow>> data;
+  Future<HealthRow?>? workoutPeriod;
   final format = DateFormat('yyyy-MM-dd');
 
   DateTime boundary(int offset) => switch (period) {
@@ -294,11 +295,20 @@ class _HealthPageState extends State<HealthPage> {
     data = service.range(
       'health_daily',
       'day',
-      format.format(boundary(0)),
+      format.format(boundary(period == 'Day' ? 0 : -1)),
       format.format(boundary(1)),
       ['day', 'metric'],
       user: service.owner!,
     );
+    workoutPeriod = period == 'Day'
+        ? null
+        : service.db
+              .from('health_workout_periods')
+              .select('workouts,workout_days')
+              .eq('user_id', service.owner!)
+              .eq('period', period.toLowerCase())
+              .eq('beginning', format.format(boundary(0)))
+              .maybeSingle();
   }
 
   void change(VoidCallback update) => setState(() {
@@ -352,6 +362,24 @@ class _HealthPageState extends State<HealthPage> {
             ),
           ],
         ),
+        if (workoutPeriod != null)
+          FutureBuilder<HealthRow?>(
+            future: workoutPeriod,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done)
+                return const SizedBox.shrink();
+              return Card(
+                child: ListTile(
+                  title: const Text('Workout consistency'),
+                  subtitle: Text(
+                    snapshot.hasError
+                        ? 'Unavailable'
+                        : '${snapshot.data?['workouts'] ?? 0} workouts · ${snapshot.data?['workout_days'] ?? 0} training days',
+                  ),
+                ),
+              );
+            },
+          ),
         FutureBuilder<List<HealthRow>>(
           future: data,
           builder: (context, snapshot) {
@@ -370,8 +398,19 @@ class _HealthPageState extends State<HealthPage> {
                 for (final item in healthMetrics.entries)
                   Builder(
                     builder: (context) {
-                      final series = rows
-                          .where((r) => r['metric'] == item.key)
+                      final cutoff = format.format(boundary(0));
+                      final readings = rows.where(
+                        (r) => r['metric'] == item.key,
+                      );
+                      final series = readings
+                          .where(
+                            (r) => (r['day'] as String).compareTo(cutoff) >= 0,
+                          )
+                          .toList();
+                      final prior = readings
+                          .where(
+                            (r) => (r['day'] as String).compareTo(cutoff) < 0,
+                          )
                           .toList();
                       final unit = series.isEmpty
                           ? ''
@@ -393,6 +432,43 @@ class _HealthPageState extends State<HealthPage> {
                                   'Daily average · ${series.length} observed days',
                                 ),
                           children: [
+                            if (period != 'Day')
+                              ListTile(
+                                title: Text(
+                                  'Previous ${period.toLowerCase()} average',
+                                ),
+                                trailing: Text(
+                                  healthDisplay(
+                                    prior.isEmpty
+                                        ? null
+                                        : prior.fold<double>(
+                                                0,
+                                                (n, r) =>
+                                                    n + (r['value'] as num),
+                                              ) /
+                                              prior.length,
+                                    prior.isEmpty ? unit : prior.first['unit'],
+                                  ),
+                                ),
+                              ),
+                            if (series.length > 1 &&
+                                [
+                                  'weight',
+                                  'body_fat',
+                                  'lean_mass',
+                                ].contains(item.key))
+                              ListTile(
+                                title: const Text(
+                                  'Change from first to last reading',
+                                ),
+                                trailing: Text(
+                                  healthDisplay(
+                                    (series.last['value'] as num) -
+                                        (series.first['value'] as num),
+                                    item.key == 'body_fat' ? 'pp' : unit,
+                                  ),
+                                ),
+                              ),
                             for (final r in series)
                               ListTile(
                                 title: Text(r['day']),
