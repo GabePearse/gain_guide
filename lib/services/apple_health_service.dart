@@ -136,7 +136,7 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
     final id = owner!;
     _generation++;
     _retry?.cancel();
-    if (ios) await channel.invokeMethod<void>('unbind');
+    if (ios) await channel.invokeMethod<void>('unbind', {'owner': id});
     await db.rpc('health_disconnect', params: {'owner': id, 'erase': erase});
     lastSync = null;
     error = null;

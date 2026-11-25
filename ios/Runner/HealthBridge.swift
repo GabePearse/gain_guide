@@ -40,6 +40,10 @@ struct HealthMetric {
         return metrics
     }()
 
+    static func readTypes(for categories: [String]) -> Set<HKObjectType> {
+        Set<HKObjectType>(catalog.filter { categories.contains($0.category) }.map { $0.type })
+    }
+
     func value(_ quantity: HKQuantity) -> Double {
         let n = quantity.doubleValue(for: unit!)
         return key == "body_fat" ? n * 100 : n
@@ -130,6 +134,7 @@ final class HealthBridge {
             watch()
             reply(nil)
         case "unbind":
+            guard grant?["owner"] as? String == args["owner"] as? String else { reply(nil); return }
             if FileManager.default.fileExists(atPath: grantURL.path) {
                 do { try FileManager.default.removeItem(at: grantURL) } catch { fail(); return }
             }
@@ -138,7 +143,7 @@ final class HealthBridge {
             reply(nil)
         case "authorize":
             let categories = args["categories"] as? [String] ?? []
-            let types = Set<HKObjectType>(HealthMetric.catalog.filter { categories.contains($0.category) }.map { $0.type })
+            let types = HealthMetric.readTypes(for: categories)
             store.requestAuthorization(toShare: [], read: types) { success,_ in
                 DispatchQueue.main.async { if success { reply(nil) } else { fail() } }
             }

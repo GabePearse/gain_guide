@@ -366,8 +366,9 @@ class _HealthPageState extends State<HealthPage> {
           FutureBuilder<HealthRow?>(
             future: workoutPeriod,
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done)
+              if (snapshot.connectionState != ConnectionState.done) {
                 return const SizedBox.shrink();
+              }
               return Card(
                 child: ListTile(
                   title: const Text('Workout consistency'),

@@ -3,6 +3,14 @@ import HealthKit
 @testable import Runner
 
 class RunnerTests: XCTestCase {
+  func testOnlySelectedTypesAreRequested() throws {
+    XCTAssertTrue(HealthMetric.readTypes(for: []).isEmpty)
+    let nutrition = HealthMetric.readTypes(for: ["nutrition"])
+    XCTAssertEqual(nutrition.count, 6)
+    XCTAssertTrue(nutrition.contains(try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .dietaryProtein))))
+    XCTAssertFalse(nutrition.contains(try XCTUnwrap(HKObjectType.categoryType(forIdentifier: .sleepAnalysis))))
+  }
+
   func testStandardUnitsAndCatalog() throws {
     let weight = try XCTUnwrap(HealthMetric.catalog.first { $0.key == "weight" })
     XCTAssertEqual(weight.value(HKQuantity(unit: .pound(), doubleValue: 100)), 45.359237, accuracy: 0.00001)
