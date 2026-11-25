@@ -49,11 +49,30 @@ struct HealthMetric {
 final class HealthBridge {
     private let store = HKHealthStore()
     private let channel: FlutterMethodChannel
-    private let defaults = UserDefaults.standard
     private var observers = [HKObserverQuery]()
     private var pending = [UUID: () -> Void]()
     private var ready = false
-    private let grantKey = "gainGuide.localHealthGrant"
+    // Exclude the installation binding from backup and device migration.
+    private var grantURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("HealthSync", isDirectory: true)
+            .appendingPathComponent("grant.plist")
+    }
+
+    private func localGrant() -> [String: Any]? {
+        guard let data = try? Data(contentsOf: grantURL) else { return nil }
+        return (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any]
+    }
+
+    private func saveGrant(_ grant: [String: Any]) throws {
+        var directory = grantURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var options = URLResourceValues()
+        options.isExcludedFromBackup = true
+        try directory.setResourceValues(options)
+        let data = try PropertyListSerialization.data(fromPropertyList: grant, format: .binary, options: 0)
+        try data.write(to: grantURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
 
     init(messenger: FlutterBinaryMessenger) {
         channel = FlutterMethodChannel(name: "gain_guide/health", binaryMessenger: messenger)
@@ -64,7 +83,7 @@ final class HealthBridge {
     private func watch() {
         observers.forEach { store.stop($0) }
         observers.removeAll()
-        let grant = defaults.dictionary(forKey: grantKey)
+        let grant = localGrant()
         let categories = grant?["categories"] as? [String] ?? []
         for metric in HealthMetric.catalog {
             guard categories.contains(metric.category) else {
@@ -97,7 +116,7 @@ final class HealthBridge {
     private func handle(_ call: FlutterMethodCall, _ reply: @escaping FlutterResult) {
         let args = call.arguments as? [String: Any] ?? [:]
         let fail = { reply(FlutterError(code: "health_query", message: "Apple Health could not complete the request.", details: nil)) }
-        let grant = defaults.dictionary(forKey: grantKey)
+        let grant = localGrant()
         switch call.method {
         case "ready":
             ready = true
@@ -107,11 +126,13 @@ final class HealthBridge {
         case "grant": reply(grant)
         case "zone": reply(TimeZone.current.identifier)
         case "bind":
-            defaults.set(args, forKey: grantKey)
+            do { try saveGrant(args) } catch { fail(); return }
             watch()
             reply(nil)
         case "unbind":
-            defaults.removeObject(forKey: grantKey)
+            if FileManager.default.fileExists(atPath: grantURL.path) {
+                do { try FileManager.default.removeItem(at: grantURL) } catch { fail(); return }
+            }
             watch()
             store.disableAllBackgroundDelivery { _,_ in }
             reply(nil)

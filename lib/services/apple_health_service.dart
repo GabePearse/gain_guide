@@ -112,7 +112,7 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
       'categories': categories,
     });
     await _flight;
-    await sync();
+    unawaited(sync());
   }
 
   Future<void> disconnect(bool erase) async {

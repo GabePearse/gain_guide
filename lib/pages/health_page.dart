@@ -21,6 +21,7 @@ class _HealthSettingsState extends State<HealthSettings> {
         'Sleep duration and stages, resting heart rate, HRV, respiratory rate',
   };
   HealthRow? cfg;
+  List<HealthRow> sources = [];
   bool available = false, working = true, bound = false;
   String? message;
 
@@ -51,7 +52,6 @@ class _HealthSettingsState extends State<HealthSettings> {
   }
 
   Future<void> load() async {
-    final config = await service.configuration();
     final native =
         service.ios &&
         await AppleHealthService.channel.invokeMethod<bool>('available') ==
@@ -61,6 +61,10 @@ class _HealthSettingsState extends State<HealthSettings> {
             'grant',
           )
         : null;
+    if (!mounted) return;
+    available = native;
+    bound = grant != null && grant['owner'] == service.owner;
+    final config = await service.configuration();
     if (!mounted) return;
     cfg = config;
     bound =
@@ -72,6 +76,16 @@ class _HealthSettingsState extends State<HealthSettings> {
       ..clear()
       ..addAll(List<String>.from(cfg?['categories'] ?? []));
     days.text = (cfg?['lookback'] ?? 90).toString();
+    final id = service.owner;
+    if (id != null) {
+      final observed = await service.db
+          .from('health_sources')
+          .select('metric,source')
+          .eq('user_id', id)
+          .order('source')
+          .order('metric');
+      if (mounted && id == service.owner) sources = observed;
+    }
   }
 
   Future<void> erase() async {
@@ -193,15 +207,33 @@ class _HealthSettingsState extends State<HealthSettings> {
                       ? 'Disconnected'
                       : 'Connected on another installation'),
             ),
+            ExpansionTile(
+              title: const Text('Observed data sources'),
+              children: sources.isEmpty
+                  ? [
+                      const ListTile(
+                        title: Text('No synchronized readings available'),
+                      ),
+                    ]
+                  : [
+                      for (final row in sources)
+                        ListTile(
+                          title: Text(
+                            healthMetrics[row['metric']] ?? row['metric'],
+                          ),
+                          subtitle: Text(row['source']),
+                        ),
+                    ],
+            ),
             if (bound)
               OutlinedButton(
                 onPressed: locked ? null : () => run(service.sync),
                 child: const Text('Sync now'),
               ),
             if (available)
-              ListTile(
-                title: const Text('Manage permissions'),
-                subtitle: const Text(
+              const ListTile(
+                title: Text('Manage permissions'),
+                subtitle: Text(
                   'In Health, open your profile → Apps → GainGuide to review or revoke individual read permissions.',
                 ),
               ),

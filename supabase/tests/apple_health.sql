@@ -9,6 +9,10 @@ declare
 begin
  insert into completed_workouts(user_id,name) values(u,'Retained workout');
  rev := health_configure(u,array['recovery','activity'],90,'America/Edmonton');
+ begin
+  perform health_apply(u,rev,'weight',null,'not-granted','[]','{}',null,false);
+  raise exception 'Unselected category accepted';
+ exception when others then if sqlerrm <> 'Consent changed' then raise; end if; end;
  fixture := jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'identifier','HKCategoryTypeIdentifierSleepAnalysis',
   'started','2026-03-08T07:00:00Z','ended','2026-03-08T15:00:00Z','source','Fixture','bundle','org.example.fixture','value',1,'unit','stage'));
  perform health_apply(u,rev,'sleep',null,'one',fixture,'{}',null,true);
