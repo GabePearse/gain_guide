@@ -342,10 +342,13 @@ class WorkoutProvider extends ChangeNotifier {
 
         for (var i = 0; i < exercise.sets.length; i++) {
           final set = exercise.sets[i];
+          final restSeconds = set.restSeconds;
+          final rest = restSeconds == null
+              ? ''
+              : ', rest after set: ${restSeconds ~/ 60}:${(restSeconds % 60).toString().padLeft(2, '0')}';
           buffer.writeln(
             '  - Set ${i + 1}: ${set.weight.toStringAsFixed(1)} lbs x '
-            '${set.reps} reps, volume '
-            '${(set.weight * set.reps).toStringAsFixed(1)}',
+            '${set.reps} reps$rest',
           );
         }
       }
