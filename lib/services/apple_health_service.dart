@@ -111,6 +111,7 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
     final id = owner!;
     await channel.invokeMethod<void>('authorize', {'categories': categories});
     final zone = await channel.invokeMethod<String>('zone');
+    final device = await channel.invokeMethod<String>('installation');
     if (id != owner) throw StateError('Account changed');
     _generation++;
     final revision = await db.rpc(
@@ -120,6 +121,7 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
         'selected': categories,
         'days': days,
         'timezone_name': zone,
+        'device': device,
       },
     );
     if (id != owner) throw StateError('Account changed');
@@ -182,7 +184,7 @@ class AppleHealthService extends ChangeNotifier with WidgetsBindingObserver {
           'revision': cfg['revision'],
           'metric': kind,
           'zone': cfg['zone'],
-          'since': DateTime.parse(cfg['since']).millisecondsSinceEpoch / 1000,
+          'since': DateTime.parse(checkpoints[kind]?['since'] ?? cfg['since']).millisecondsSinceEpoch / 1000,
         };
         await syncHealthPages(
           anchor: anchor,

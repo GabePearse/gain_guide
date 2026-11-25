@@ -2,6 +2,7 @@
 -- binds a consent decision to one installation, invalidating stale uploads.
 create table public.health_connection (
   user_id uuid primary key default auth.uid() references auth.users on delete cascade,
+  installation uuid not null,
   revision uuid not null default gen_random_uuid(),
   categories text[] not null check (categories <@ array['activity','body','nutrition','recovery']),
   lookback integer not null check (lookback between 1 and 3650),
@@ -13,11 +14,12 @@ create table public.health_connection (
 create table public.health_checkpoint (
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
   metric text not null, anchor text not null, dirty boolean not null,
+  installation uuid not null, since timestamptz not null, zone text not null, lookback integer not null,
   primary key (user_id,metric)
 );
 create table public.health_sample (
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
-  seen_revision uuid not null, id uuid not null, metric text not null, identifier text not null,
+  id uuid not null, metric text not null, identifier text not null,
   started timestamptz not null, ended timestamptz not null check (ended >= started),
   source text not null, bundle text not null, zone text not null,
   value double precision not null, unit text not null,
@@ -42,18 +44,19 @@ begin
   end loop;
 end $$;
 
-create function public.health_configure(owner uuid, selected text[], days integer, timezone_name text)
+create function public.health_configure(owner uuid, selected text[], days integer, timezone_name text, device uuid)
 returns uuid language plpgsql security invoker set search_path = public, pg_temp as $$
 declare rev uuid := gen_random_uuid();
 begin
   if owner is distinct from auth.uid() or owner is null then raise exception 'Account changed'; end if;
   perform pg_advisory_xact_lock(hashtextextended(owner::text,0));
-  insert into health_connection(user_id,revision,categories,lookback,zone,since)
-  values(owner,rev,selected,days,timezone_name,
+  insert into health_connection(user_id,installation,revision,categories,lookback,zone,since)
+  values(owner,device,rev,selected,days,timezone_name,
     (date_trunc('day',now() at time zone timezone_name) - make_interval(days=>days-1)) at time zone timezone_name)
-  on conflict(user_id) do update set revision=rev, categories=selected, lookback=days,
+  on conflict(user_id) do update set installation=device,revision=rev, categories=selected, lookback=days,
     zone=excluded.zone,since=excluded.since,consented_at=now();
-  delete from health_checkpoint where user_id=owner;
+  delete from health_checkpoint where user_id=owner and
+    (installation<>device or zone<>timezone_name or lookback<>days);
   return rev;
 end $$;
 
@@ -63,8 +66,8 @@ begin
   if owner is distinct from auth.uid() or owner is null then raise exception 'Account changed'; end if;
   perform pg_advisory_xact_lock(hashtextextended(owner::text,0));
   delete from health_connection where user_id=owner;
-  delete from health_checkpoint where user_id=owner;
   if erase then
+    delete from health_checkpoint where user_id=owner;
     delete from health_sample where user_id=owner;
     delete from health_stat where user_id=owner;
   end if;
@@ -73,7 +76,7 @@ end $$;
 create function public.health_apply(owner uuid, grant_id uuid, kind text, previous text,
   next_anchor text, samples jsonb, removed uuid[], totals jsonb, pending boolean)
 returns void language plpgsql security invoker set search_path = public, pg_temp as $$
-declare cfg health_connection; category text;
+declare cfg health_connection; category text; baseline timestamptz;
 begin
   if owner is distinct from auth.uid() or owner is null then raise exception 'Account changed'; end if;
   perform pg_advisory_xact_lock(hashtextextended(owner::text,0));
@@ -84,23 +87,26 @@ begin
     when kind in ('sleep','resting_hr','hrv','respiration') then 'recovery' end;
   if cfg.user_id is null or category is null or not(category=any(cfg.categories)) then raise exception 'Consent changed'; end if;
   if (select anchor from health_checkpoint where user_id=owner and metric=kind) is distinct from previous then raise exception 'Checkpoint changed'; end if;
-  insert into health_sample(user_id,seen_revision,id,metric,identifier,started,ended,source,bundle,zone,value,unit)
-    select owner,grant_id,s.id,kind,s.identifier,s.started,s.ended,s.source,s.bundle,cfg.zone,s.value,s.unit
+  select coalesce((select since from health_checkpoint where user_id=owner and metric=kind), cfg.since) into baseline;
+  insert into health_sample(user_id,id,metric,identifier,started,ended,source,bundle,zone,value,unit)
+    select owner,s.id,kind,s.identifier,s.started,s.ended,s.source,s.bundle,cfg.zone,s.value,s.unit
     from jsonb_to_recordset(samples) s(id uuid, identifier text, started timestamptz, ended timestamptz, source text,bundle text,value float8,unit text)
-    on conflict(user_id,id) do update set seen_revision=excluded.seen_revision,started=excluded.started,ended=excluded.ended,value=excluded.value,
+    on conflict(user_id,id) do update set started=excluded.started,ended=excluded.ended,value=excluded.value,
       source=excluded.source,bundle=excluded.bundle,zone=excluded.zone,unit=excluded.unit;
   delete from health_sample where user_id=owner and metric=kind and id=any(removed);
-  if not pending then
-    -- A new grant starts with a full snapshot. Reconcile only its imported
-    -- window, after every page has landed, including samples removed offline.
-    delete from health_sample where user_id=owner and metric=kind and started >= cfg.since and seen_revision<>grant_id;
-  end if;
   if totals is not null then
-    delete from health_stat where user_id=owner and metric=kind and day >= (cfg.since at time zone cfg.zone)::date;
+    -- Empty reads can mean the user withheld access. Only remove a missing
+    -- daily total when its underlying samples have also been removed.
+    delete from health_stat d where d.user_id=owner and d.metric=kind and d.day >= (baseline at time zone cfg.zone)::date
+      and not exists (select 1 from health_sample s where s.user_id=owner and s.metric=kind
+        and s.started < ((d.day + 1)::timestamp at time zone cfg.zone)
+        and s.ended >= (d.day::timestamp at time zone cfg.zone))
+      and not exists (select 1 from jsonb_to_recordset(totals) t(day date) where t.day=d.day);
     insert into health_stat(user_id,day,metric,unit,value,zone)
-      select owner,s.day,kind,s.unit,s.value,cfg.zone from jsonb_to_recordset(totals) s(day date,unit text,value float8);
+      select owner,s.day,kind,s.unit,s.value,cfg.zone from jsonb_to_recordset(totals) s(day date,unit text,value float8)
+      on conflict(user_id,day,metric) do update set value=excluded.value,unit=excluded.unit,zone=excluded.zone;
   end if;
-  insert into health_checkpoint values(owner,kind,next_anchor,pending)
+  insert into health_checkpoint values(owner,kind,next_anchor,pending,cfg.installation,baseline,cfg.zone,cfg.lookback)
     on conflict(user_id,metric) do update set anchor=excluded.anchor,dirty=excluded.dirty;
 end $$;
 

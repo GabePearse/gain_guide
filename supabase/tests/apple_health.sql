@@ -8,7 +8,7 @@ declare
  u uuid := auth.uid(); rev uuid; fixture jsonb; n integer; t float8;
 begin
  insert into completed_workouts(user_id,name) values(u,'Retained workout');
- rev := health_configure(u,array['recovery','activity'],90,'America/Edmonton');
+ rev := health_configure(u,array['recovery','activity'],90,'America/Edmonton',u);
  begin
   perform health_apply(u,rev,'weight',null,'not-granted','[]','{}',null,false);
   raise exception 'Unselected category accepted';
@@ -46,6 +46,9 @@ begin
   perform health_disconnect(u,true); raise exception 'Cross-account delete';
  exception when others then if sqlerrm <> 'Account changed' then raise; end if; end;
  perform set_config('request.jwt.claim.sub',u::text,true);
+ perform health_disconnect(u,false);
+ rev := health_configure(u,array['activity'],90,'America/Edmonton',u);
+ if (select anchor from health_checkpoint where metric='steps') is distinct from 's1' then raise exception 'Reconnect lost its cursor'; end if;
  perform health_disconnect(u,true);
  if exists(select from health_stat) or not exists(select from completed_workouts where name='Retained workout') then raise exception 'Deletion isolation failed'; end if;
  begin

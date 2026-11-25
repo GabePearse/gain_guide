@@ -68,14 +68,23 @@ final class HealthBridge {
         return (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any]
     }
 
-    private func saveGrant(_ grant: [String: Any]) throws {
+    private func writeLocal(_ data: Data, to url: URL) throws {
         var directory = grantURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var options = URLResourceValues()
         options.isExcludedFromBackup = true
         try directory.setResourceValues(options)
-        let data = try PropertyListSerialization.data(fromPropertyList: grant, format: .binary, options: 0)
-        try data.write(to: grantURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    private func installation() throws -> String {
+        let url = grantURL.deletingLastPathComponent().appendingPathComponent("installation")
+        if FileManager.default.fileExists(atPath: url.path) {
+            return try String(contentsOf: url, encoding: .utf8)
+        }
+        let id = UUID().uuidString
+        try writeLocal(Data(id.utf8), to: url)
+        return id
     }
 
     init(messenger: FlutterBinaryMessenger) {
@@ -128,9 +137,14 @@ final class HealthBridge {
             reply(nil)
         case "available": reply(HKHealthStore.isHealthDataAvailable())
         case "grant": reply(grant)
+        case "installation":
+            do { reply(try installation()) } catch { fail() }
         case "zone": reply(TimeZone.current.identifier)
         case "bind":
-            do { try saveGrant(args) } catch { fail(); return }
+            do {
+                let data = try PropertyListSerialization.data(fromPropertyList: args, format: .binary, options: 0)
+                try writeLocal(data, to: grantURL)
+            } catch { fail(); return }
             watch()
             reply(nil)
         case "unbind":
