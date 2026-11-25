@@ -1,3 +1,4 @@
+import 'services/apple_health_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,8 @@ Future<void> main() async {
   if (!kIsWeb) {
     await NotificationService.instance.initialize();
   }
+
+  await AppleHealthService.instance.initialize();
 
   runApp(
     ChangeNotifierProvider(

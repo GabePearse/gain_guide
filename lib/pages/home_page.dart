@@ -1,3 +1,4 @@
+import 'health_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -242,6 +243,10 @@ class HomePage extends StatelessWidget {
             tooltip: 'Account',
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (value) {
+              if (value == 'settings' || value == 'health') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) =>
+                  value == 'settings' ? const HealthSettings() : const HealthPage()));
+              }
               if (value == 'signOut') {
                 context.read<WorkoutProvider>().signOut();
               }
@@ -256,6 +261,8 @@ class HomePage extends StatelessWidget {
                   subtitle: Text(currentUser?.email ?? ''),
                 ),
               ),
+              const PopupMenuItem(value: 'health', child: ListTile(leading: Icon(Icons.favorite_outline), title: Text('Health dashboard'))),
+              const PopupMenuItem(value: 'settings', child: ListTile(leading: Icon(Icons.settings_outlined), title: Text('Settings'))),
               const PopupMenuItem<String>(
                 value: 'signOut',
                 child: ListTile(

@@ -1,3 +1,4 @@
+import '../services/apple_health_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
@@ -305,6 +306,7 @@ class WorkoutProvider extends ChangeNotifier {
     required DateTime start,
     required DateTime end,
   }) async {
+    final user = _supabase.auth.currentUser!.id;
     final allHistory = await _data.getHistory();
     final inclusiveEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
     final workouts = allHistory.where((w) => w.completedAt != null && !w.completedAt!.isBefore(start) && !w.completedAt!.isAfter(inclusiveEnd)).toList();
@@ -319,7 +321,6 @@ class WorkoutProvider extends ChangeNotifier {
 
     if (workouts.isEmpty) {
       buffer.writeln('No workouts were completed in this date range.');
-      return buffer.toString();
     }
 
     for (final workout in workouts) {
@@ -352,6 +353,7 @@ class WorkoutProvider extends ChangeNotifier {
       buffer.writeln();
     }
 
+    buffer.writeln(await AppleHealthService.instance.export(start, end, user));
     return buffer.toString();
   }
 
